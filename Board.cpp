@@ -107,7 +107,7 @@ bool BoardImpl::placeShip(Point topOrLeft, int shipId, Direction dir)
     // Invalid ID
     if (shipId < 0 || shipId >= m_game.nShips())
         return false;
-
+    
     // Check if Ship with ID already exists on Board
     auto idMatches = [&shipId](ShipInstance sp)
     {
@@ -216,7 +216,12 @@ void BoardImpl::display(bool shotsOnly) const
     {
         cout << r << " ";
         for (int c = 0; c < m_game.cols(); c++)
-            cout << m_grid[r][c];
+        {
+            if (shotsOnly && m_grid[r][c] != 'X' && m_grid[r][c] != 'o')
+                cout << '.';
+            else
+                cout << m_grid[r][c];
+        }
         cout << endl;
     }
 }
@@ -265,7 +270,7 @@ bool BoardImpl::attack(Point p, bool& shotHit, bool& shipDestroyed, int& shipId)
 
     // Check if damaged ship is destroyed
     shipDestroyed = shipInstanceDestroyed(*matchedShipPos);
-
+    shotHit = true;
     shipId = matchedShipPos->shipId;
     return true;
 }

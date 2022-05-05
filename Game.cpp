@@ -26,6 +26,8 @@ class GameImpl
     char shipSymbol(int shipId) const;
     string shipName(int shipId) const;
     Player* play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause);
+
+    bool playerAttack(Player* attacker, Player* attacked, Board& attackedBoard);
     //void printShipTypes()
     //{
     //    for (Ship s : shipTypes)
@@ -117,9 +119,64 @@ string GameImpl::shipName(int shipId) const
     return shipTypes[shipId].name;
 }
 
+bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedBoard)
+{
+    cout << attacker->name() << "'s turn. Board for " << attacked->name() << ":" << endl;
+    if (attacker->isHuman())
+        attackedBoard.display(true);
+    else
+        attackedBoard.display(false);
+
+    Point attackPos = attacker->recommendAttack();
+    bool shotHit;
+    bool shipDestroyed;
+    int shipIdAttacked;
+    bool boardAttack = attackedBoard.attack(attackPos, shotHit, shipDestroyed, shipIdAttacked);
+
+    attacker->recordAttackResult(attackPos, boardAttack, shotHit, shipDestroyed, shipIdAttacked);
+    attacked->recordAttackByOpponent(attackPos);
+    if (boardAttack)
+    {
+        cout << attacker->name() << " attacked (" << attackPos.r << "," << attackPos.c << ") and ";
+        if (shotHit)
+        {
+            if (shipDestroyed)
+                cout << "destroyed the " << shipName(shipIdAttacked);
+            else
+                cout << "hit something";
+        }
+        else
+            cout << "missed";
+        cout << ", resulting in:" << endl;
+        if (attacker->isHuman())
+            attackedBoard.display(true);
+        else
+            attackedBoard.display(false);
+    }
+    else
+    {
+        cout << attacker->name() << " wasted a shot at (" << attackPos.r << "," << attackPos.c << ")." << endl;
+    }
+    if (attackedBoard.allShipsDestroyed())
+        return true;
+
+    cout << "Press enter to continue: ";
+    cin.ignore(10000, '\n');
+    return false;
+}
+
 Player* GameImpl::play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause)
 {
-    return nullptr;  // This compiles but may not be correct
+    if (!p1->placeShips(b1)) return nullptr;
+    if (!p2->placeShips(b2)) return nullptr;
+    while (true)
+    {
+        if (playerAttack(p1, p2, b2))
+            break;
+        if (playerAttack(p2, p1, b1))
+            break;
+    }
+    return nullptr;
 }
 
 //******************** Game functions *******************************

@@ -17,22 +17,32 @@ using namespace std;
 
 int main()
 {
+    //Game g(10, 10);
+    //g.addShip(5, 'A', "airship");
+    //g.addShip(4, 'B', "bird");
+    //Board b(g);
+    //b.placeShip(Point(0, 0), 0, HORIZONTAL);
+    //b.placeShip(Point(1, 0), 1, HORIZONTAL);
+    //bool shotHit = false;
+    //bool destroyed = false;
+    //int shipId = -1;
+    //cout << b.allShipsDestroyed() << endl;
+    //for (int i = 0; i < 5; i++)
+    //{
+    //    b.attack(Point(0, i), shotHit, destroyed, shipId);
+    //}
+    //b.display(true);
+    //cout << b.allShipsDestroyed() << endl;
     Game g(10, 10);
-    g.addShip(5, 'A', "airship");
-    g.addShip(4, 'B', "bird");
-    Board b(g);
-    b.placeShip(Point(0, 0), 0, HORIZONTAL);
-    b.placeShip(Point(1, 0), 1, HORIZONTAL);
-    bool shotHit = false;
-    bool destroyed = false;
-    int shipId = -1;
-    cout << b.allShipsDestroyed() << endl;
-    for (int i = 0; i < 5; i++)
-    {
-        b.attack(Point(0, i), shotHit, destroyed, shipId);
-    }
-    b.display(true);
-    cout << b.allShipsDestroyed() << endl;
+    g.addShip(5, 'A', "aircraft carrier");
+    g.addShip(4, 'B', "battleship");
+    //g.addShip(3, 'D', "destroyer");
+    //g.addShip(3, 'S', "submarine");
+    //g.addShip(2, 'P', "patrol boat");
+    //Player* h = createPlayer("human", "Mediocre Midori", g);
+    Player* h1 = createPlayer("awful", "Mediocre Midori", g);
+    Player* h2 = createPlayer("human", "Shuman the Human", g);
+    g.play(h1, h2);
 }
 
 //int main()

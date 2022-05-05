@@ -4,6 +4,7 @@
 #include "globals.h"
 #include <iostream>
 #include <string>
+#include <cctype>
 
 using namespace std;
 
@@ -79,7 +80,109 @@ bool getLineWithTwoIntegers(int& r, int& c)
 
 // TODO:  You need to replace this with a real class declaration and
 //        implementation.
-typedef AwfulPlayer HumanPlayer;
+class HumanPlayer : public Player
+{
+public: 
+    HumanPlayer(string nm, const Game& g) : Player(nm, g) { }
+    virtual ~HumanPlayer() {}
+    virtual bool isHuman() const { return true;  }
+    virtual bool placeShips(Board& b);
+    virtual Point recommendAttack();
+    virtual void recordAttackResult(Point p, bool validShot, bool shotHit,
+        bool shipDestroyed, int shipId);
+    virtual void recordAttackByOpponent(Point p);
+};
+
+bool HumanPlayer::placeShips(Board& b)
+{
+    cout << name() << " must place " << game().nShips() << " ships" << endl;
+    
+    for (int i = 0; i < game().nShips(); i++)
+    {
+        b.display(false);
+        // Check valid direction
+        char dirChar;
+        while (true)
+        {
+            cout << "Enter h or v for direction of " << game().shipName(i) << " (length " << game().shipLength(i) << "): ";
+            cin >> dirChar;
+            cin.ignore(10000, '\n');
+
+            // Valid direction
+            if (dirChar == 'h' || dirChar == 'v')
+                break;
+
+            cout << "Direction must be h or v." << endl;
+        }
+
+        // Convert direction character to Direction
+        Direction dir;
+        if (dirChar == 'h')
+            dir = HORIZONTAL;
+        if (dirChar == 'v')
+            dir = VERTICAL;
+
+        // Check valid position
+        int r, c;
+        while (true)
+        {
+            cout << "Enter row and column of leftmost cell (e.g., 3 5): ";
+            cin >> r >> c;
+
+            // Incorrect input type
+            if (!cin)
+            {
+                cin.clear();
+                cin.ignore(10000, '\n');
+                cout << "You must enter two integers." << endl;
+                continue;
+            }
+
+            // Out of bounds or occupied position
+            if (r < 0 || r >= game().rows() || c < 0 || c >= game().cols() || 
+                !b.placeShip(Point(r, c), i, dir))
+            {
+                cin.ignore(10000, '\n');
+                cout << "The ship can not be placed there." << endl;
+                continue;
+            }
+            cin.ignore(10000, '\n');
+            break;
+        }
+    }
+    return true;
+}
+
+Point HumanPlayer::recommendAttack()
+{
+    int r, c;
+    while (true)
+    {
+        cout << "Enter the row and column to attack (e.g., 3 5): ";
+        cin >> r >> c;
+        if (cin)
+        {
+            cin.ignore(10000, '\n');
+            break;
+        }
+        cin.clear();
+        cin.ignore(10000, '\n');
+        cout << "You must enter two integers." << endl;
+    }
+    return Point(r, c);
+}
+
+void HumanPlayer::recordAttackResult(Point p, bool validShot, bool shotHit,
+    bool shipDestroyed, int shipId) {
+    return;
+}
+
+void HumanPlayer::recordAttackByOpponent(Point p)
+{
+    return;
+}
+
+//typedef AwfulPlayer HumanPlayer;
 
 //*********************************************************************
 //  MediocrePlayer
