@@ -163,14 +163,22 @@ bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedB
 
 Player* GameImpl::play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause)
 {
-    if (!p1->placeShips(b1)) return nullptr;
-    if (!p2->placeShips(b2)) return nullptr;
+    for (int i = 0; i < 50; i++)
+        if (p1->placeShips(b1)) break;
+    for (int i = 0; i < 50; i++)
+        if (!p2->placeShips(b2)) break;
     while (true)
     {
         if (playerAttack(p1, p2, b2))
-            break;
+        {
+            cout << p1->name() << " wins!" << endl;
+            return p1;
+        }
         if (playerAttack(p2, p1, b1))
-            break;
+        {
+            cout << p2->name() << " wins!" << endl;
+            return p2;
+        }
     }
     return nullptr;
 }

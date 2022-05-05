@@ -276,9 +276,9 @@ bool MediocrePlayer::placeShips(Board& b)
     b.block();
     Point start(0, 0);
     bool canPlace = recursivePlace(b, start, 0);
-    //b.display(false);
+   // b.display(false);
     b.unblock();
-    //b.display(false);
+   // b.display(false);
     return canPlace;
 }
 
@@ -292,14 +292,26 @@ bool MediocrePlayer::prevAttacksContains(Point& p)
 
 Point MediocrePlayer::recommendAttack()
 { 
-    /*if (m_moveState == 1)
-    {
-        Point randomPoint = game().randomPoint();
-        prevAttacks.push_back(randomPoint);
-        return randomPoint;
-    }*/
     if (m_moveState == 1)
     {
+        Point randomPoint;
+        do
+        {
+            randomPoint = game().randomPoint();
+        } while (prevAttacksContains(randomPoint));
+        prevAttacks.push_back(randomPoint);
+        return randomPoint;
+    }
+    if (m_moveState == 2)
+    {
+        // Game has ships of length 6 or more
+        for (int i = 0; i < game().nShips(); i++)
+            if (game().shipLength(i) >= 6)
+            {
+                m_moveState = 1;
+                return recommendAttack();
+            }
+
         vector<Point> validPoints;
         for (int i = transitionPoint.r - 4; i <= transitionPoint.r + 4; i++)
         {
@@ -330,7 +342,16 @@ Point MediocrePlayer::recommendAttack()
 
 void MediocrePlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool shipDestroyed, int shipId) 
 {
-    
+    // Hits ship but does not destroy
+    if (m_moveState == 1 && shotHit && !shipDestroyed)
+    {
+        transitionPoint = p;
+        m_moveState = 2;
+    }
+    if (m_moveState == 2 && shipDestroyed)
+    {
+        m_moveState = 1;
+    }
 }
 
 //*********************************************************************
