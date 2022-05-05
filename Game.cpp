@@ -2,6 +2,7 @@
 #include "Board.h"
 #include "Player.h"
 #include "globals.h"
+#include "utility.h"
 #include <iostream>
 #include <string>
 #include <cstdlib>
@@ -10,14 +11,6 @@
 #include <algorithm>
 
 using namespace std;
-
-struct Ship
-{
-    int length;
-    char symbol;
-    string name;
-    Ship(int length, char symbol, string name) : length(length), symbol(symbol), name(name) {}
-};
 
 class GameImpl
 {

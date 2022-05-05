@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "Player.h"
+#include "Board.h"
 #include <iostream>
 #include <string>
 
@@ -18,8 +19,20 @@ int main()
 {
     Game g(10, 10);
     g.addShip(5, 'A', "airship");
-    g.addShip(5, 'B', "bird");
-    cout << g.shipName(1);
+    g.addShip(4, 'B', "bird");
+    Board b(g);
+    b.placeShip(Point(0, 0), 0, HORIZONTAL);
+    b.placeShip(Point(1, 0), 1, HORIZONTAL);
+    bool shotHit = false;
+    bool destroyed = false;
+    int shipId = -1;
+    cout << b.allShipsDestroyed() << endl;
+    for (int i = 0; i < 5; i++)
+    {
+        b.attack(Point(0, i), shotHit, destroyed, shipId);
+    }
+    b.display(true);
+    cout << b.allShipsDestroyed() << endl;
 }
 
 //int main()
