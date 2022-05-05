@@ -12,6 +12,15 @@
 
 using namespace std;
 
+// Stores individual ship data
+struct ShipType
+{
+    int length;
+    char symbol;
+    std::string name;
+    ShipType(int length, char symbol, std::string name) : length(length), symbol(symbol), name(name) {}
+};
+
 class GameImpl
 {
   public:
@@ -28,24 +37,11 @@ class GameImpl
     Player* play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause);
 
     bool playerAttack(Player* attacker, Player* attacked, Board& attackedBoard);
-    //void printShipTypes()
-    //{
-    //    for (Ship s : shipTypes)
-    //    {
-    //        cout << "N=" << s.name << " L=" << s.length << " Char='" << s.symbol << "'" << endl;
-    //    }
-    //}
 private:
     int m_rows;
     int m_cols;
-    vector<Ship> shipTypes;
+    vector<ShipType> shipTypes;
 };
-
-// REMOVE
-//void Game::printTypes()
-//{
-//    m_impl->printShipTypes();
-//}
 
 void waitForEnter()
 {
@@ -85,7 +81,7 @@ bool GameImpl::addShip(int length, char symbol, string name)
 
     // Validate name
     // Checks if the same name
-    auto notSameName = [&name](Ship ship) 
+    auto notSameName = [&name](ShipType ship)
     {
         if (name == ship.name)
             return false;
@@ -93,7 +89,7 @@ bool GameImpl::addShip(int length, char symbol, string name)
     };
     if (all_of(shipTypes.begin(), shipTypes.end(), notSameName))
     {
-        shipTypes.push_back(Ship(length, symbol, name));
+        shipTypes.push_back(ShipType(length, symbol, name));
         return true;
     }
     return false;  // This compiles but may not be correct

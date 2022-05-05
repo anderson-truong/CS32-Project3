@@ -4,7 +4,6 @@
 #include "globals.h"
 #include <iostream>
 #include <string>
-#include <cctype>
 
 using namespace std;
 
@@ -84,7 +83,6 @@ class HumanPlayer : public Player
 {
 public: 
     HumanPlayer(string nm, const Game& g) : Player(nm, g) { }
-    virtual ~HumanPlayer() {}
     virtual bool isHuman() const { return true;  }
     virtual bool placeShips(Board& b);
     virtual Point recommendAttack();
@@ -182,17 +180,158 @@ void HumanPlayer::recordAttackByOpponent(Point p)
     return;
 }
 
-//typedef AwfulPlayer HumanPlayer;
-
 //*********************************************************************
 //  MediocrePlayer
 //*********************************************************************
 
 // TODO:  You need to replace this with a real class declaration and
 //        implementation.
-typedef AwfulPlayer MediocrePlayer;
+class MediocrePlayer : public Player
+{
+public:
+    MediocrePlayer(string nm, const Game& g) : Player(nm, g), m_moveState(1), transitionPoint(5, 5) { }
+    virtual bool placeShips(Board& b);
+    bool prevAttacksContains(Point& p);
+    virtual Point recommendAttack();
+    virtual void recordAttackResult(Point p, bool validShot, bool shotHit,
+        bool shipDestroyed, int shipId);
+    virtual void recordAttackByOpponent(Point p) { return; }
+
+    bool recursivePlace(Board& b, Point p, int shipId);
+private:
+    int m_moveState;
+    Point transitionPoint;
+    vector<Point> prevAttacks;
+};
 // Remember that Mediocre::placeShips(Board& b) must start by calling
 // b.block(), and must call b.unblock() just before returning.
+
+bool MediocrePlayer::recursivePlace(Board& b, Point p, int shipId)
+{
+    /*
+    * Unable to place
+    */
+    //b.display(false);
+    Direction chosenDir;
+    if (b.placeShip(p, shipId, HORIZONTAL))
+        chosenDir = HORIZONTAL;
+    else if (b.placeShip(p, shipId, VERTICAL))
+        chosenDir = VERTICAL;
+    // If unable to place ship starting at Point
+    else
+    {
+        //cout << "Unable to place at (" << p.r << "," << p.c << ")" << endl;
+        // Move one column over
+        Point newPoint(p.r, p.c + 1);
+        // Move to new row
+        if (newPoint.c >= game().cols())
+        {
+            newPoint.r++;
+            newPoint.c = 0;
+        }
+        // Cannot fit ship
+        if (newPoint.r >= game().rows())
+            return false;
+
+        if (recursivePlace(b, newPoint, shipId))
+            return true;
+        return false;
+    }
+
+    /*
+    * Able to place
+    */
+
+    // Finished placing (no more ships to place)
+    if (shipId + 1 >= game().nShips())
+        return true;
+
+    // Begin recursively placing with the next ship ID
+    if (recursivePlace(b, Point(0, 0), shipId + 1))
+        return true;
+    // Able to place, but branch fails
+    b.unplaceShip(p, shipId, chosenDir);
+
+    // Move one column over
+    Point newPoint(p.r, p.c + 1);
+    //cout << "Branch failed, moving to (" << newPoint.r << "," << newPoint.c << ")" << endl;
+    // Move to new row
+    if (newPoint.c >= game().cols())
+    {
+        newPoint.r++;
+        newPoint.c = 0;
+    }
+    // Cannot fit ship
+    if (newPoint.r >= game().rows())
+        return false;
+    if (recursivePlace(b, newPoint, shipId))
+        return true;
+    return false;
+}
+
+bool MediocrePlayer::placeShips(Board& b)
+{
+    if (game().nShips() <= 0)
+        return false;
+    b.block();
+    Point start(0, 0);
+    bool canPlace = recursivePlace(b, start, 0);
+    //b.display(false);
+    b.unblock();
+    //b.display(false);
+    return canPlace;
+}
+
+bool MediocrePlayer::prevAttacksContains(Point& p)
+{
+    auto it = std::find_if(prevAttacks.begin(), prevAttacks.end(), [&p](Point prev) { return p.r == prev.r && p.c == prev.c; });
+    // If equal to end(), then cannot find and return true
+    // If found, return false
+    return it != prevAttacks.end();
+}
+
+Point MediocrePlayer::recommendAttack()
+{ 
+    /*if (m_moveState == 1)
+    {
+        Point randomPoint = game().randomPoint();
+        prevAttacks.push_back(randomPoint);
+        return randomPoint;
+    }*/
+    if (m_moveState == 1)
+    {
+        vector<Point> validPoints;
+        for (int i = transitionPoint.r - 4; i <= transitionPoint.r + 4; i++)
+        {
+            Point newValidPoint(i, transitionPoint.c);
+            if (game().isValid(newValidPoint))
+                validPoints.push_back(newValidPoint);
+        }
+        for (int i = transitionPoint.c - 4; i <= transitionPoint.c + 4; i++)
+        {
+            Point newValidPoint(transitionPoint.r, i);
+            if (game().isValid(newValidPoint))
+                validPoints.push_back(newValidPoint);
+        }
+        //for (Point p : validPoints)
+        //    cout << p.r << ", " << p.c << endl;
+        
+        // While randomPoint is not a previous attack
+        Point randomPoint(transitionPoint);
+        do
+        {
+            randomPoint = validPoints[randInt(validPoints.size())];
+        } while (prevAttacksContains(randomPoint));
+        prevAttacks.push_back(randomPoint);
+        return randomPoint;
+    }
+    return Point();
+}
+
+void MediocrePlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool shipDestroyed, int shipId) 
+{
+    
+}
 
 //*********************************************************************
 //  GoodPlayer

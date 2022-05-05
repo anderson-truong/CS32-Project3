@@ -33,16 +33,24 @@ int main()
     //}
     //b.display(true);
     //cout << b.allShipsDestroyed() << endl;
+    //Game g(10, 10);
+    //g.addShip(5, 'A', "aircraft carrier");
+    //g.addShip(4, 'B', "battleship");
+    ////g.addShip(3, 'D', "destroyer");
+    ////g.addShip(3, 'S', "submarine");
+    ////g.addShip(2, 'P', "patrol boat");
+    ////Player* h = createPlayer("human", "Mediocre Midori", g);
+    //Player* h1 = createPlayer("awful", "Mediocre Midori", g);
+    //Player* h2 = createPlayer("human", "Shuman the Human", g);
+    //g.play(h1, h2);
     Game g(10, 10);
-    g.addShip(5, 'A', "aircraft carrier");
-    g.addShip(4, 'B', "battleship");
-    //g.addShip(3, 'D', "destroyer");
-    //g.addShip(3, 'S', "submarine");
-    //g.addShip(2, 'P', "patrol boat");
-    //Player* h = createPlayer("human", "Mediocre Midori", g);
-    Player* h1 = createPlayer("awful", "Mediocre Midori", g);
-    Player* h2 = createPlayer("human", "Shuman the Human", g);
-    g.play(h1, h2);
+    g.addShip(5, 'A', "airship");
+    g.addShip(2, 'S', "ship");
+    Player* m = createPlayer("mediocre", "Bob", g);
+    Board b(g);
+    //m->placeShips(b);
+    Point p = m->recommendAttack();
+    cout << p.r << ", " << p.c << endl;
 }
 
 //int main()
