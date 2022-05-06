@@ -222,7 +222,7 @@ bool MediocrePlayer::recursivePlace(Board& b, Point p, int shipId)
     // If unable to place ship starting at Point
     else
     {
-        //cout << "Unable to place at (" << p.r << "," << p.c << ")" << endl;
+        //cerr << "Unable to place at (" << p.r << "," << p.c << ")" << endl;
         // Move one column over
         Point newPoint(p.r, p.c + 1);
         // Move to new row
@@ -256,7 +256,7 @@ bool MediocrePlayer::recursivePlace(Board& b, Point p, int shipId)
 
     // Move one column over
     Point newPoint(p.r, p.c + 1);
-    //cout << "Branch failed, moving to (" << newPoint.r << "," << newPoint.c << ")" << endl;
+    //cerr << "Branch failed, moving to (" << newPoint.r << "," << newPoint.c << ")" << endl;
     // Move to new row
     if (newPoint.c >= game().cols())
     {
@@ -328,7 +328,7 @@ Point MediocrePlayer::recommendAttack()
                 validPoints.push_back(newValidPoint);
         }
         //for (Point p : validPoints)
-        //    cout << p.r << ", " << p.c << endl;
+        //    cerr << p.r << ", " << p.c << endl;
         
         // While randomPoint is not a previous attack
         Point randomPoint(transitionPoint);
@@ -392,11 +392,11 @@ void GoodPlayer::printProbArray()
     {
         for (int c = 0; c < game().cols(); c++)
         {
-            cout << setw(2) << probArray[r][c];
+            cerr << setw(2) << probArray[r][c];
             if (c != game().cols() - 1)
-                cout << ", ";
+                cerr << ", ";
         }
-        cout << endl;
+        cerr << endl;
     }
 }
 
