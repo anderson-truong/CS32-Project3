@@ -2,8 +2,10 @@
 #include "Board.h"
 #include "Game.h"
 #include "globals.h"
+#include "utility.h"
 #include <iostream>
 #include <string>
+#include <iomanip>
 
 using namespace std;
 
@@ -358,9 +360,241 @@ void MediocrePlayer::recordAttackResult(Point p, bool validShot, bool shotHit, b
 //  GoodPlayer
 //*********************************************************************
 
-// TODO:  You need to replace this with a real class declaration and
-//        implementation.
-typedef AwfulPlayer GoodPlayer;
+class GoodPlayer : public Player
+{
+public:
+    GoodPlayer(string nm, const Game& g);
+    bool recursivePlace(Board& b, int shipId);
+    virtual bool placeShips(Board& b);
+    virtual Point recommendAttack();
+    virtual void recordAttackResult(Point p, bool validShot, bool shotHit,
+        bool shipDestroyed, int shipId);
+    virtual void recordAttackByOpponent(Point p) { return; }
+
+    bool validPoint(Point p);
+    bool validPlace(Point p, int shipId, Direction dir);
+    void huntProb();
+    void targetProb();
+    void resetProbArray();
+
+    void printProbArray();
+private:
+    vector<Point> m_missed;
+    vector<Point> m_destroyed;
+    vector<ShipType> shipsAlive;
+    int huntOrTarget; // 0 = Hunt, 1 = Target
+    int probArray[MAXROWS][MAXCOLS];
+};
+
+void GoodPlayer::printProbArray()
+{
+    for (int r = 0; r < game().rows(); r++)
+    {
+        for (int c = 0; c < game().cols(); c++)
+        {
+            cout << setw(2) << probArray[r][c];
+            if (c != game().cols() - 1)
+                cout << ", ";
+        }
+        cout << endl;
+    }
+}
+
+GoodPlayer::GoodPlayer(string nm, const Game& g) : Player(nm, g), huntOrTarget(0)
+{ 
+    resetProbArray();
+    for (int n = 0; n < g.nShips(); n++)
+        shipsAlive.push_back(ShipType(g.shipLength(n), g.shipSymbol(n), g.shipName(n)));
+}
+
+bool GoodPlayer::recursivePlace(Board& b, int shipId)
+{
+    // Random point
+    Point p(randInt(game().rows()), randInt(game().cols()));
+    // Random direction;
+    int dirChoice = randInt(2);
+    Direction dir = dirChoice == 0 ? VERTICAL : HORIZONTAL;
+    if (b.placeShip(p, shipId, dir))
+    {
+        // Try placing next ship for max 50 times
+        for (int i = 0; i < 50; i++)
+        {
+            if (shipId + 1 == game().nShips())
+                return true;
+            if (recursivePlace(b, shipId+1))
+                return true;
+        }
+    }
+    return false;
+}
+
+// Place ships randomly
+bool GoodPlayer::placeShips(Board& b)
+{
+    for (int i = 0; i < 50; i++)
+        if (recursivePlace(b, 0))
+            return true;
+    return true;
+}
+
+// Checks if Point is in bounds and has not been moved on yet
+bool GoodPlayer::validPoint(Point p)
+{
+    if (!game().isValid(p))
+        return false;
+    auto matchingPos = [&p](Point pos)
+    {
+        if (p.r == pos.r && p.c == pos.c)
+            return true;
+        return false;
+    };
+    // Point has already been moved on
+    if (find_if(m_missed.begin(), m_missed.end(), matchingPos) != m_missed.end())
+        return false;
+    return true;
+}
+
+// Checks if placing a ship at a point in a direction is valid
+bool GoodPlayer::validPlace(Point p, int shipLength, Direction dir)
+{
+    if (!validPoint(p))
+        return false;
+    if (dir == VERTICAL)
+    {
+        // Validate Points along vertical path
+        for (int r = p.r; r < p.r + shipLength; r++)
+        {
+            if (!validPoint(Point(r, p.c)))
+                return false;
+        }
+        return true;
+    }
+    if (dir == HORIZONTAL)
+    {
+        // Validate Points along horizontal path
+        for (int c = p.c; c < p.c + shipLength; c++)
+        {
+            if (!validPoint(Point(p.r, c)))
+                return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+void GoodPlayer::huntProb()
+{
+    resetProbArray();
+    for (const ShipType& st : shipsAlive)
+    {
+        for (int r = 0; r < game().rows(); r++)
+            for (int c = 0; c < game().cols(); c++)
+            {
+                // Check placements along vertical crosshair
+                for (int i = r - st.length + 1; i <= r; i++)
+                    if (validPlace(Point(i, c), st.length, VERTICAL))
+                        probArray[r][c]++;
+                
+                // Check placements along horizontal crosshair
+                for (int i = c - st.length + 1; i <= c; i++)
+                    if (validPlace(Point(r, i), st.length, HORIZONTAL))
+                        probArray[r][c]++;
+            }
+    }
+}
+
+void GoodPlayer::targetProb()
+{
+    resetProbArray();
+    for (const ShipType& st : shipsAlive)
+    {
+        for (const Point& p : m_destroyed)
+        {
+            // For each possible placement starting position in vertical crosshair
+            for (int i = p.r - st.length + 1; i <= p.r; i++)
+                // For each position along ship placement path
+                for (int r = i; r < i + st.length; r++)
+                    // If valid position, add to probability
+                    if (validPoint(Point(r, p.c)))
+                        probArray[r][p.c]++;   
+
+            // For each possible placement starting position in horizontal crosshair
+            for (int i = p.c - st.length + 1; i <= p.c; i++)
+                // For each position along ship placement path
+                for (int c = i; c < i + st.length; c++)
+                    // If valid position, add to probability
+                    if (validPoint(Point(p.r, c)))
+                        probArray[p.r][c]++;
+        }
+    }
+    // Set destroyed spot to 0 probability
+    for (const Point& p : m_destroyed)
+        probArray[p.r][p.c] = 0;
+}
+
+Point GoodPlayer::recommendAttack()
+{
+    if (huntOrTarget == 0)
+        huntProb();
+    if (huntOrTarget == 1)
+        targetProb();
+   // printProbArray();
+    int maxProb = 0;
+    vector<Point> maxPoints;
+    for (int r = 0; r < game().rows(); r++)
+    {
+        for (int c = 0; c < game().cols(); c++)
+        {
+            // Probability of a ship at a point
+            int prob = probArray[r][c];
+            // Add to list of best points to recommend
+            if (prob == maxProb)
+                maxPoints.push_back(Point(r, c));
+
+            // Override previous best points
+            if (prob > maxProb)
+            {
+                maxProb = prob;
+                maxPoints.clear();
+                maxPoints.push_back(Point(r, c));
+            }
+        }
+    }
+
+    // Return random Point from best points list
+    return maxPoints[randInt(maxPoints.size())];
+}
+
+void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool shipDestroyed, int shipId)
+{
+    // If hit, switch to targeting mode, add Point to list of destroyed
+    if (shotHit)
+    {
+        huntOrTarget = 1;
+        m_destroyed.push_back(p);
+    }
+    // If not, stay in same mode, add Point to list of missed
+    else
+        m_missed.push_back(p);
+
+    // If destroyed ship, switch to hunting mode
+    // Move all destroyed Points to missed
+    // Reset list of destroyed
+    if (shipDestroyed)
+    {
+        huntOrTarget = 0;
+        for (Point p : m_destroyed)
+            m_missed.push_back(p);
+        m_destroyed.clear();
+    }
+}
+
+void GoodPlayer::resetProbArray()
+{
+    for (int r = 0; r < MAXROWS; r++)
+        for (int c = 0; c < MAXCOLS; c++)
+            probArray[r][c] = 0;
+}
 
 //*********************************************************************
 //  createPlayer

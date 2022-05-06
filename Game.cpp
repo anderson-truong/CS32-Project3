@@ -12,15 +12,6 @@
 
 using namespace std;
 
-// Stores individual ship data
-struct ShipType
-{
-    int length;
-    char symbol;
-    std::string name;
-    ShipType(int length, char symbol, std::string name) : length(length), symbol(symbol), name(name) {}
-};
-
 class GameImpl
 {
   public:

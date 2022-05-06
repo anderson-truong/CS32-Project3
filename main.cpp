@@ -50,8 +50,8 @@ int main()
     g.addShip(3, 'S', "submarine");
     g.addShip(2, 'P', "patrol boat");
     //Player* h = createPlayer("human", "Ander", g);
-    Player* m1 = createPlayer("awful", "1", g);
-    Player* m2 = createPlayer("mediocre", "2", g);
+    Player* m1 = createPlayer("human", "1", g);
+    Player* m2 = createPlayer("good", "2", g);
     g.play(m1, m2);
 }
 
