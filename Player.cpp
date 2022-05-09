@@ -97,56 +97,58 @@ bool HumanPlayer::placeShips(Board& b)
 {
     cout << name() << " must place " << game().nShips() << " ships" << endl;
     
+    // Perform input validation routine for each ship
     for (int i = 0; i < game().nShips(); i++)
     {
         b.display(false);
-        // Check valid direction
-        char dirChar;
-        while (true)
+
+        //======================
+        // Validate direction input
+        //======================
+        char dirChar = ' ';
+
+        // Loop until player enters in valid direction
+        while (dirChar != 'h' && dirChar != 'v')
         {
             cout << "Enter h or v for direction of " << game().shipName(i) << " (length " << game().shipLength(i) << "): ";
             cin >> dirChar;
             cin.ignore(10000, '\n');
 
-            // Valid direction
+            // Break out of loop of valid character 'h' or 'v'
             if (dirChar == 'h' || dirChar == 'v')
                 break;
 
             cout << "Direction must be h or v." << endl;
         }
+        // Convert character to Direction type
+        Direction dir = dirChar == 'h' ? HORIZONTAL : VERTICAL;
 
-        // Convert direction character to Direction
-        Direction dir;
-        if (dirChar == 'h')
-            dir = HORIZONTAL;
-        if (dirChar == 'v')
-            dir = VERTICAL;
 
-        // Check valid position
+        //=========================
+        // Validate ship position input
+        //=========================
         int r, c;
+
+        // Loop until player enters in valid coordinates
         while (true)
         {
             cout << "Enter row and column of leftmost cell (e.g., 3 5): ";
-            cin >> r >> c;
 
-            // Incorrect input type
-            if (!cin)
+            // Invalid input type
+            if (!getLineWithTwoIntegers(r, c))
             {
-                cin.clear();
-                cin.ignore(10000, '\n');
                 cout << "You must enter two integers." << endl;
                 continue;
             }
 
-            // Out of bounds or occupied position
-            if (r < 0 || r >= game().rows() || c < 0 || c >= game().cols() || 
-                !b.placeShip(Point(r, c), i, dir))
+            // Invalid point (out of bounds) or cannot place ship (space goes out of bounds/is occupied)
+            if (!game().isValid(Point(r, c)) || !b.placeShip(Point(r, c), i, dir))
             {
-                cin.ignore(10000, '\n');
                 cout << "The ship can not be placed there." << endl;
                 continue;
             }
-            cin.ignore(10000, '\n');
+            
+            // If input is valid, break out of loop
             break;
         }
     }
@@ -156,38 +158,40 @@ bool HumanPlayer::placeShips(Board& b)
 Point HumanPlayer::recommendAttack()
 {
     int r, c;
+
+    // Loop until Human enters in valid coordinates
     while (true)
     {
         cout << "Enter the row and column to attack (e.g., 3 5): ";
-        cin >> r >> c;
-        if (cin)
+
+        // Invalid input type
+        if (!getLineWithTwoIntegers(r, c))
         {
-            cin.ignore(10000, '\n');
-            break;
+            cout << "You must enter two integers." << endl;
+            continue;
         }
-        cin.clear();
-        cin.ignore(10000, '\n');
-        cout << "You must enter two integers." << endl;
+
+        // If input is valid, break out of loop
+        break;
     }
     return Point(r, c);
 }
 
 void HumanPlayer::recordAttackResult(Point p, bool validShot, bool shotHit,
-    bool shipDestroyed, int shipId) {
-    return;
+    bool shipDestroyed, int shipId) 
+{
+    // No code necessary, user makes decisiond
 }
 
 void HumanPlayer::recordAttackByOpponent(Point p)
 {
-    return;
+    // No code necessary, user makes decisions
 }
 
 //*********************************************************************
 //  MediocrePlayer
 //*********************************************************************
 
-// TODO:  You need to replace this with a real class declaration and
-//        implementation.
 class MediocrePlayer : public Player
 {
 public:
@@ -207,42 +211,44 @@ private:
 };
 // Remember that Mediocre::placeShips(Board& b) must start by calling
 // b.block(), and must call b.unblock() just before returning.
-
+            
 bool MediocrePlayer::recursivePlace(Board& b, Point p, int shipId)
 {
-    /*
-    * Unable to place
-    */
-    //b.display(false);
+    // Store ship direction (to potentially unplace later)
     Direction chosenDir;
+
+    // Tries to place ship horizontally first
     if (b.placeShip(p, shipId, HORIZONTAL))
         chosenDir = HORIZONTAL;
+
+    // Can't place horizontally, try vertically
     else if (b.placeShip(p, shipId, VERTICAL))
         chosenDir = VERTICAL;
-    // If unable to place ship starting at Point
+
+    // Can't place in any direction, try different location
     else
     {
-        //cerr << "Unable to place at (" << p.r << "," << p.c << ")" << endl;
         // Move one column over
         Point newPoint(p.r, p.c + 1);
-        // Move to new row
+
+        // If new column exceeds column size, move to next row
         if (newPoint.c >= game().cols())
         {
             newPoint.r++;
             newPoint.c = 0;
         }
-        // Cannot fit ship
+
+        // If row exceeds row size, unable to fit ship
         if (newPoint.r >= game().rows())
             return false;
 
+        // Try to place ship at new position
         if (recursivePlace(b, newPoint, shipId))
             return true;
+
+        // Cannot place ship at any position
         return false;
     }
-
-    /*
-    * Able to place
-    */
 
     // Finished placing (no more ships to place)
     if (shipId + 1 >= game().nShips())
