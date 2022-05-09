@@ -56,6 +56,8 @@ int GameImpl::cols() const
 
 bool GameImpl::isValid(Point p) const
 {
+    // 0 <= Row < # of rows
+    // 0 <= Column < # of columns
     return p.r >= 0  &&  p.r < rows()  &&  p.c >= 0  &&  p.c < cols();
 }
 
@@ -66,24 +68,39 @@ Point GameImpl::randomPoint() const
 
 bool GameImpl::addShip(int length, char symbol, string name)
 {
-    // Validate length
+    // Length is at least 1 and cannot exceed row/column size
     if (length < 1 || length > MAXROWS || length > MAXCOLS)
         return false;
 
-    // Validate name
-    // Checks if the same name
-    auto notSameName = [&name](ShipType ship)
+    // Checks if new ship has same name or same symbol
+    auto notSameName = [&name, &symbol](ShipType ship)
     {
+        // Same name
         if (name == ship.name)
             return false;
+
+        // Same symbol
+        if (symbol == ship.symbol)
+            return false;
+
+        // Ship symbol cannot be 'X' or 'o' (used for marking attacks)
+        if (ship.symbol == 'X' || ship.symbol == 'o')
+            return false;
+        
+        // New ship type is does not match existing ship type
         return true;
     };
+
+    // Loop through each ship type, check if new ship type is unique
     if (all_of(shipTypes.begin(), shipTypes.end(), notSameName))
     {
+        // If new ship is unique, add to list of ship types
         shipTypes.push_back(ShipType(length, symbol, name));
         return true;
     }
-    return false;  // This compiles but may not be correct
+
+    // New ship type is not unique, cannot add
+    return false;
 }
 
 int GameImpl::nShips() const
@@ -147,8 +164,7 @@ bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedB
     if (attackedBoard.allShipsDestroyed())
         return true;
 
-    cout << "Press enter to continue: ";
-    cin.ignore(10000, '\n');
+    waitForEnter();
     return false;
 }
 

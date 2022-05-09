@@ -31,10 +31,8 @@ class BoardImpl
     bool shipInstanceDestroyed(const ShipInstance& instance) const;
 
   private:
-    // TODO:  Decide what private members you need.  Here's one that's likely
-    //        to be useful:
     const Game& m_game;
-    // Stores the display
+    // Stores the display grid
     char m_grid[MAXROWS][MAXCOLS];
     // Stores list of ship IDs and their topOrLeft positions
     vector<ShipInstance> m_shipInstances;
@@ -217,6 +215,8 @@ void BoardImpl::display(bool shotsOnly) const
         cout << r << " ";
         for (int c = 0; c < m_game.cols(); c++)
         {
+            // To only show shots,
+            // print '.' if point is a ship symbol (i.e. not 'X' or 'o')
             if (shotsOnly && m_grid[r][c] != 'X' && m_grid[r][c] != 'o')
                 cout << '.';
             else

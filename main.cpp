@@ -49,7 +49,7 @@ int main()
     g.addShip(3, 'D', "destroyer");
     g.addShip(3, 'S', "submarine");
     g.addShip(2, 'P', "patrol boat");
-    Player* p1 = createPlayer("human", "banterson", g);
+    Player* p1 = createPlayer("human", "lucy", g);
     Player* p2 = createPlayer("good", "megamind", g);
     g.play(p1, p2);
 }
