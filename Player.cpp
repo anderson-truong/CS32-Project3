@@ -544,7 +544,11 @@ Point GoodPlayer::recommendAttack()
         huntProb();
     if (huntOrTarget == 1)
         targetProb();
+<<<<<<< Updated upstream
    //printProbArray();
+=======
+
+>>>>>>> Stashed changes
     int maxProb = 0;
     vector<Point> maxPoints;
     for (int r = 0; r < game().rows(); r++)

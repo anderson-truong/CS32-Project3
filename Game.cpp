@@ -72,19 +72,11 @@ bool GameImpl::addShip(int length, char symbol, string name)
     if (length < 1 || length > MAXROWS || length > MAXCOLS)
         return false;
 
-    // Checks if new ship has same name or same symbol
+    // Checks if new ship has same name
     auto notSameName = [&name, &symbol](ShipType ship)
     {
         // Same name
         if (name == ship.name)
-            return false;
-
-        // Same symbol
-        if (symbol == ship.symbol)
-            return false;
-
-        // Ship symbol cannot be 'X' or 'o' (used for marking attacks)
-        if (ship.symbol == 'X' || ship.symbol == 'o')
             return false;
         
         // New ship type is does not match existing ship type

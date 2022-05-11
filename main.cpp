@@ -43,14 +43,20 @@ int main()
     //Player* h1 = createPlayer("awful", "Mediocre Midori", g);
     //Player* h2 = createPlayer("human", "Shuman the Human", g);
     //g.play(h1, h2);
+   
     Game g(10, 10);
     g.addShip(5, 'A', "aircraft carrier");
     g.addShip(4, 'B', "battleship");
     g.addShip(3, 'D', "destroyer");
     g.addShip(3, 'S', "submarine");
     g.addShip(2, 'P', "patrol boat");
+<<<<<<< Updated upstream
     Player* p1 = createPlayer("human", "dane", g);
     Player* p2 = createPlayer("good", "megamind", g);
+=======
+    Player* p1 = createPlayer("human", "anderman", g);
+    Player* p2 = createPlayer("mediocre", "megamind", g);
+>>>>>>> Stashed changes
     g.play(p1, p2);
 }
 

@@ -80,14 +80,34 @@ void BoardImpl::clear()
 
 void BoardImpl::block()
 {
-      // Block cells with 50% probability
-    for (int r = 0; r < m_game.rows(); r++)
-        for (int c = 0; c < m_game.cols(); c++)
-            if (randInt(2) == 0)
+    // Stores previously blocked Points
+    vector<Point> previouslyBlocked;
+    // Number of blocked cells is half of total cells
+    int blockCount = (m_game.rows() * m_game.cols()) / 2;
+
+    while (blockCount > 0)
+    {
+        // New Point with random row/col coordinates
+        Point p(randInt(m_game.rows()), randInt(m_game.cols()));
+
+        // If Point already exists, continue and find new random Point
+        bool pointBlocked = false;
+        for (Point prev : previouslyBlocked)
+        {
+            if (p.r == prev.r && p.c == prev.c)
             {
-                // Block '.' to 'X'
-                if (m_grid[r][c] == '.') m_grid[r][c] = 'X';
+                pointBlocked = true;
+                break;
             }
+        }
+        if (pointBlocked)
+            continue;
+
+        // Block out array at Point
+        m_grid[p.r][p.c] = 'X';
+        previouslyBlocked.push_back(p);
+        blockCount--;
+    }
 }
 
 void BoardImpl::unblock()
@@ -113,6 +133,7 @@ bool BoardImpl::placeShip(Point topOrLeft, int shipId, Direction dir)
             return true;
         return false;
     };
+
     // If any of the existing ships on the board has ID that matches shipId
     if (any_of(m_shipInstances.begin(), m_shipInstances.end(), idMatches))
         return false;
