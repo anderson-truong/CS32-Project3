@@ -27,7 +27,7 @@ class GameImpl
     string shipName(int shipId) const;
     Player* play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause);
 
-    bool playerAttack(Player* attacker, Player* attacked, Board& attackedBoard);
+    bool playerAttack(Player* attacker, Player* attacked, Board& attackedBoard, bool shouldPause);
 private:
     int m_rows;
     int m_cols;
@@ -115,9 +115,9 @@ string GameImpl::shipName(int shipId) const
     return shipTypes[shipId].name;
 }
 
-bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedBoard)
+bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedBoard, bool shouldPause)
 {
-    cout << attacker->name() << "'s turn. Board for " << attacked->name() << ":" << endl;
+    cout << attacker->name() << "'s turn.\tBoard for " << attacked->name() << ":" << endl;
     if (attacker->isHuman())
         attackedBoard.display(true);
     else
@@ -156,24 +156,23 @@ bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedB
     if (attackedBoard.allShipsDestroyed())
         return true;
 
-    waitForEnter();
+    if (shouldPause)
+        waitForEnter();
     return false;
 }
 
 Player* GameImpl::play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause)
 {
-    for (int i = 0; i < 50; i++)
-        if (p1->placeShips(b1)) break;
-    for (int i = 0; i < 50; i++)
-        if (!p2->placeShips(b2)) break;
+    if (!p1->placeShips(b1) || !p2->placeShips(b2))
+        return nullptr;
     while (true)
     {
-        if (playerAttack(p1, p2, b2))
+        if (playerAttack(p1, p2, b2, shouldPause))
         {
             cout << p1->name() << " wins!" << endl;
             return p1;
         }
-        if (playerAttack(p2, p1, b1))
+        if (playerAttack(p2, p1, b1, shouldPause))
         {
             cout << p2->name() << " wins!" << endl;
             return p2;
