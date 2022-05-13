@@ -442,6 +442,8 @@ bool GoodPlayer::recursivePlace(Board& b, int shipId)
     for (int i = 0; i < 50; i++)
     {
         int shipLength = game().shipLength(shipId);
+        // Make sure no ships adjacent to ship space
+        
         // Random point
         Point p(randInt(game().rows()) - shipLength + 1, randInt(game().cols()) - shipLength + 1);
         // Random direction;
@@ -584,6 +586,23 @@ void GoodPlayer::targetProb()
                         probArray[row][c]++;
                     }
                 }
+    }
+
+    // If hits twice, hone in one single line in crosshair
+    if (m_destroyed.size() >= 2)
+    {
+        // Same row
+        if (m_destroyed[0].r == m_destroyed[1].r)
+        {
+            for (int i = 0; i < game().cols(); i++)
+                probArray[m_destroyed[0].r][i] *= 2;
+        }
+        // Same column
+        if (m_destroyed[0].c == m_destroyed[1].c)
+        {
+            for (int i = 0; i < game().rows(); i++)
+                probArray[i][m_destroyed[0].c] *= 2;
+        }
     }
     // Set destroyed spot to 0 probability
     for (const Point& p : m_destroyed)

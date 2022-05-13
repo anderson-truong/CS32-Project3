@@ -14,7 +14,7 @@ using namespace std;
 
 class GameImpl
 {
-  public:
+public:
     GameImpl(int nRows, int nCols);
     int rows() const;
     int cols() const;
@@ -40,7 +40,7 @@ void waitForEnter()
     cin.ignore(10000, '\n');
 }
 
-GameImpl::GameImpl(int nRows, int nCols): m_rows(nRows), m_cols(nCols)
+GameImpl::GameImpl(int nRows, int nCols) : m_rows(nRows), m_cols(nCols)
 {
 }
 
@@ -58,7 +58,7 @@ bool GameImpl::isValid(Point p) const
 {
     // 0 <= Row < # of rows
     // 0 <= Column < # of columns
-    return p.r >= 0  &&  p.r < rows()  &&  p.c >= 0  &&  p.c < cols();
+    return p.r >= 0 && p.r < rows() && p.c >= 0 && p.c < cols();
 }
 
 Point GameImpl::randomPoint() const
@@ -112,12 +112,6 @@ string GameImpl::shipName(int shipId) const
 
 bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedBoard, bool shouldPause)
 {
-    //cout << attacker->name() << "'s turn.   Board for " << attacked->name() << ":" << endl;
-    //if (attacker->isHuman())
-    //    attackedBoard.display(true);
-    //else
-    //    attackedBoard.display(false);
-
     Point attackPos = attacker->recommendAttack();
     bool shotHit;
     bool shipDestroyed;
@@ -126,28 +120,6 @@ bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedB
 
     attacker->recordAttackResult(attackPos, boardAttack, shotHit, shipDestroyed, shipIdAttacked);
     attacked->recordAttackByOpponent(attackPos);
-    //if (boardAttack)
-    //{
-    //    cout << attacker->name() << " attacked (" << attackPos.r << "," << attackPos.c << ") and ";
-    //    if (shotHit)
-    //    {
-    //        if (shipDestroyed)
-    //            cout << "destroyed the " << shipName(shipIdAttacked);
-    //        else
-    //            cout << "hit something";
-    //    }
-    //    else
-    //        cout << "missed";
-    //    cout << ", resulting in:" << endl;
-    //    if (attacker->isHuman())
-    //        attackedBoard.display(true);
-    //    else
-    //        attackedBoard.display(false);
-    //}
-    //else
-    //{
-    //    cout << attacker->name() << " wasted a shot at (" << attackPos.r << "," << attackPos.c << ")." << endl;
-    //}
     if (attackedBoard.allShipsDestroyed())
         return true;
 
@@ -183,12 +155,12 @@ Player* GameImpl::play(Player* p1, Player* p2, Board& b1, Board& b2, bool should
 
 Game::Game(int nRows, int nCols)
 {
-    if (nRows < 1  ||  nRows > MAXROWS)
+    if (nRows < 1 || nRows > MAXROWS)
     {
         cout << "Number of rows must be >= 1 and <= " << MAXROWS << endl;
         exit(1);
     }
-    if (nCols < 1  ||  nCols > MAXCOLS)
+    if (nCols < 1 || nCols > MAXCOLS)
     {
         cout << "Number of columns must be >= 1 and <= " << MAXCOLS << endl;
         exit(1);
@@ -228,22 +200,22 @@ bool Game::addShip(int length, char symbol, string name)
         cout << "Bad ship length " << length << "; it must be >= 1" << endl;
         return false;
     }
-    if (length > rows()  &&  length > cols())
+    if (length > rows() && length > cols())
     {
         cout << "Bad ship length " << length << "; it won't fit on the board"
-             << endl;
+            << endl;
         return false;
     }
-    if (!isascii(symbol)  ||  !isprint(symbol))
+    if (!isascii(symbol) || !isprint(symbol))
     {
         cout << "Unprintable character with decimal value " << symbol
-             << " must not be used as a ship symbol" << endl;
+            << " must not be used as a ship symbol" << endl;
         return false;
     }
-    if (symbol == 'X'  ||  symbol == '.'  ||  symbol == 'o')
+    if (symbol == 'X' || symbol == '.' || symbol == 'o')
     {
         cout << "Character " << symbol << " must not be used as a ship symbol"
-             << endl;
+            << endl;
         return false;
     }
     int totalOfLengths = 0;
@@ -253,7 +225,7 @@ bool Game::addShip(int length, char symbol, string name)
         if (shipSymbol(s) == symbol)
         {
             cout << "Ship symbol " << symbol
-                 << " must not be used for more than one ship" << endl;
+                << " must not be used for more than one ship" << endl;
             return false;
         }
     }
@@ -272,25 +244,25 @@ int Game::nShips() const
 
 int Game::shipLength(int shipId) const
 {
-    assert(shipId >= 0  &&  shipId < nShips());
+    assert(shipId >= 0 && shipId < nShips());
     return m_impl->shipLength(shipId);
 }
 
 char Game::shipSymbol(int shipId) const
 {
-    assert(shipId >= 0  &&  shipId < nShips());
+    assert(shipId >= 0 && shipId < nShips());
     return m_impl->shipSymbol(shipId);
 }
 
 string Game::shipName(int shipId) const
 {
-    assert(shipId >= 0  &&  shipId < nShips());
+    assert(shipId >= 0 && shipId < nShips());
     return m_impl->shipName(shipId);
 }
 
 Player* Game::play(Player* p1, Player* p2, bool shouldPause)
 {
-    if (p1 == nullptr  ||  p2 == nullptr  ||  nShips() == 0)
+    if (p1 == nullptr || p2 == nullptr || nShips() == 0)
         return nullptr;
     Board b1(*this);
     Board b2(*this);

@@ -6,19 +6,6 @@
 
 using namespace std;
 
-//int main()
-//{
-//    Game g(10, 10);
-//    g.addShip(5, 'A', "aircraft carrier");
-//    g.addShip(4, 'B', "battleship");
-//    g.addShip(3, 'D', "destroyer");
-//    g.addShip(3, 'S', "submarine");
-//    g.addShip(2, 'P', "patrol boat");
-//    Player* p1 = createPlayer("good", "megamind", g);
-//    Player* p2 = createPlayer("mediocre", "spongebob", g);
-//    g.play(p1, p2);
-//}
-
 bool addStandardShips(Game& g)
 {
     return g.addShip(5, 'A', "aircraft carrier")  &&
@@ -30,7 +17,7 @@ bool addStandardShips(Game& g)
 
 int main()
 {
-    const int NTRIALS = 100;
+    const int NTRIALS = 1000;
 
     cout << "Select one of these choices for an example of the game:" << endl;
     cout << "  1.  A mini-game between two mediocre players" << endl;
@@ -99,7 +86,7 @@ int main()
                 << " =============================" << endl;
             Game g(10, 10);
             addStandardShips(g);
-            Player* p1 = createPlayer("mediocre", "smol", g);
+            Player* p1 = createPlayer("mediocre", "smol brain", g);
             Player* p2 = createPlayer("good", "MEGAMIND", g);
             Player* winner = (k % 2 == 1 ?
                 g.play(p1, p2, false) : g.play(p2, p1, false));
