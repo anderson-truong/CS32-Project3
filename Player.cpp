@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <iomanip>
+#include <list>
 
 using namespace std;
 
@@ -204,7 +205,7 @@ private:
 
     int m_moveState;
     Point transitionPoint;
-    vector<Point> prevAttacks;
+    list<Point> prevAttacks;
 };
 
 //#########################
@@ -394,10 +395,15 @@ public:
 
     void printProbArray();
 private:
+    enum AttackMode
+    {
+        HUNT,
+        TARGET
+    };
     vector<Point> m_missed;
     vector<Point> m_destroyed;
     vector<ShipType> shipsAlive;
-    int huntOrTarget; // 0 = Hunt, 1 = Target
+    AttackMode m_attackMode; // HUNT or TARGET
     int probArray[MAXROWS][MAXCOLS];
 };
 
@@ -415,44 +421,57 @@ void GoodPlayer::printProbArray()
     }
 }
 
-GoodPlayer::GoodPlayer(string nm, const Game& g) : Player(nm, g), huntOrTarget(0)
+GoodPlayer::GoodPlayer(string nm, const Game& g) : Player(nm, g), m_attackMode(HUNT)
 { 
+    // Sets probability array to all 0s
     resetProbArray();
+
+    // Store starting ship types
     for (int n = 0; n < g.nShips(); n++)
         shipsAlive.push_back(ShipType(g.shipLength(n), g.shipSymbol(n), g.shipName(n)));
 }
 
+//##################
+// Recursively places random ships
+//##################
 bool GoodPlayer::recursivePlace(Board& b, int shipId)
 {
-    // Random point
-    Point p(randInt(game().rows()), randInt(game().cols()));
-    // Random direction;
-    int dirChoice = randInt(2);
-    Direction dir = dirChoice == 0 ? VERTICAL : HORIZONTAL;
-    if (b.placeShip(p, shipId, dir))
+    if (shipId == game().nShips())
+        return true;
+
+    for (int i = 0; i < 50; i++)
     {
-        // Try placing next ship for max 50 times
-        for (int i = 0; i < 50; i++)
+        int shipLength = game().shipLength(shipId);
+        // Random point
+        Point p(randInt(game().rows()) - shipLength + 1, randInt(game().cols()) - shipLength + 1);
+        // Random direction;
+        int dirChoice = randInt(2);
+        Direction dir = dirChoice == 0 ? VERTICAL : HORIZONTAL;
+
+        if (b.placeShip(p, shipId, dir))
         {
-            if (shipId + 1 == game().nShips())
+            if (recursivePlace(b, shipId + 1))
                 return true;
-            if (recursivePlace(b, shipId+1))
-                return true;
+            else
+                b.unplaceShip(p, shipId, dir);
         }
     }
+
     return false;
 }
 
-// Place ships randomly
+//#############
+// Randomly places ships
+//#############
 bool GoodPlayer::placeShips(Board& b)
 {
-    for (int i = 0; i < 50; i++)
-        if (recursivePlace(b, 0))
-            return true;
-    return true;
+    return recursivePlace(b, 0);
 }
 
-// Checks if Point is in bounds and has not been moved on yet
+//################
+// Checks if Point is in bounds
+// and was not attacked before
+//################
 bool GoodPlayer::validPoint(Point p)
 {
     if (!game().isValid(p))
@@ -469,7 +488,10 @@ bool GoodPlayer::validPoint(Point p)
     return true;
 }
 
-// Checks if placing a ship at a point in a direction is valid
+//#################
+// Checks if able to place a ship
+// length at a point in a direction
+//#################
 bool GoodPlayer::validPlace(Point p, int shipLength, Direction dir)
 {
     if (!validPoint(p))
@@ -518,6 +540,7 @@ void GoodPlayer::huntProb()
     }
 
     // Parity: only keep every other N positions
+    // Set other points to 0 probability
     // N: smallest length of ship
     int smallestLength = shipsAlive[0].length;
     for (const ShipType& st : shipsAlive)
@@ -569,9 +592,9 @@ void GoodPlayer::targetProb()
 
 Point GoodPlayer::recommendAttack()
 {
-    if (huntOrTarget == 0)
+    if (m_attackMode == HUNT)
         huntProb();
-    if (huntOrTarget == 1)
+    if (m_attackMode == TARGET)
         targetProb();
 
     int maxProb = 0;
@@ -598,84 +621,82 @@ void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool 
     if (shotHit)
     {
         m_destroyed.push_back(p);
-        huntOrTarget = 1;
+        m_attackMode = TARGET;
     }
     // If not, stay in same mode, add Point to list of missed
     else
         m_missed.push_back(p);
 
-    // If destroyed ship, switch to hunting mode
-    // Move all destroyed Points to missed
-    // Reset list of destroyed
+    // If ship was destroyed at Point P
+    // 1. Deduce which positions the ship was located on
+    // 2. Move those positions to m_missed positions
+    // 3. If there are still positions in m_destroyed, Keep targeting those positions
+    // 4. If m_destroyed is empty, switch to HUNT mode
     if (shipDestroyed)
     {
         Point target = m_destroyed.front();
         int destroyedShipLength = game().shipLength(shipId);
-        int start;
-        int end;
-        // If destroyed ship was vertical
-        if (p.c == target.c)
+        int start = 0;
+        int end = 0;
+        // Point p is topmost
+        if (p.r < target.r)
         {
-            // Point p is topmost
-            if (p.r < target.r)
+            start = p.r;
+            end = p.r + destroyedShipLength;
+        }
+        // Point p is bottommost
+        else if (p.r > target.r)
+        {
+            start = p.r - destroyedShipLength + 1;
+            end = p.r + 1;
+        }
+        // Point p is leftmost
+        else if (p.c < target.c)
+        {
+            start = p.c;
+            end = p.c + destroyedShipLength;
+        }
+        // Point p is rightmost
+        else if (p.c > target.c)
+        {
+            start = p.c - destroyedShipLength + 1;
+            end = p.c + 1;
+        }
+
+        // Loop from start to end positions
+        for (int i = start; i < end; i++)
+        {
+            int r, c;
+
+            // Ship was vertical
+            if (p.c == target.c)
             {
-                start = p.r;
-                end = p.r + destroyedShipLength;
+                r = i;
+                c = p.c;
             }
-            // Point p is bottommost
+            // Ship was horizontal
             else
             {
-                start = p.r - destroyedShipLength + 1;
-                end = p.r + 1;
+                r = p.r;
+                c = i;
             }
-            // Make destroyed ship positions invalid
-            for (int r = start; r < end; r++)
+
+            // Store destroyed position as a missed position
+            m_missed.push_back(Point(r, c));
+
+            // Remove destroyed position from vector
+            for (vector<Point>::iterator it = m_destroyed.begin(); it != m_destroyed.end();)
             {
-                // Add point to missed
-                m_missed.push_back(Point(r, p.c));
-                // Remove from destroyed
-                for (auto it = m_destroyed.begin(); it != m_destroyed.end();)
-                {
-                    if ((*it).r == r && (*it).c == p.c)
-                        it = m_destroyed.erase(it);
-                    else
-                        it++;
-                }
+                if ((*it).r == r && (*it).c == c)
+                    it = m_destroyed.erase(it);
+                else
+                    it++;
             }
         }
-        // Destroyed ship was horizontal
-        else
-        {
-            // Point p is leftmost
-            if (p.c < target.c)
-            {
-                start = p.c;
-                end = p.c + destroyedShipLength;
-            }
-            // Point p is rightmost
-            else
-            {
-                start = p.c - destroyedShipLength + 1;
-                end = p.c + 1;
-            }
-            // Make destroyed ship positions invalid
-            for (int c = start; c < end; c++)
-            {
-                // Add point to missed
-                m_missed.push_back(Point(p.r, c));
-                // Remove from destroyed
-                for (auto it = m_destroyed.begin(); it != m_destroyed.end();)
-                {
-                    if ((*it).r == p.r && (*it).c == c)
-                        it = m_destroyed.erase(it);
-                    else
-                        it++;
-                }
-            }
-        }
+
         // Switch to HUNT if no positions left in m_destroyed
         if (m_destroyed.empty())
-            huntOrTarget = 0;
+            m_attackMode = HUNT;
     }
 }
 

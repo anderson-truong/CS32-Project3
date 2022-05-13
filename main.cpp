@@ -30,7 +30,7 @@ bool addStandardShips(Game& g)
 
 int main()
 {
-    const int NTRIALS = 1000;
+    const int NTRIALS = 100;
 
     cout << "Select one of these choices for an example of the game:" << endl;
     cout << "  1.  A mini-game between two mediocre players" << endl;
@@ -99,7 +99,7 @@ int main()
                 << " =============================" << endl;
             Game g(10, 10);
             addStandardShips(g);
-            Player* p1 = createPlayer("awful", "Awful Audrey", g);
+            Player* p1 = createPlayer("mediocre", "smol", g);
             Player* p2 = createPlayer("good", "MEGAMIND", g);
             Player* winner = (k % 2 == 1 ?
                 g.play(p1, p2, false) : g.play(p2, p1, false));
@@ -113,6 +113,19 @@ int main()
         // We'd expect a mediocre player to win most of the games against
         // an awful player.  Similarly, a good player should outperform
         // a mediocre player.
+    }
+    else if (line[0] == '5')
+    {
+        string name;
+        cout << "WHAT IS YOUR NAME WORTHY CHALLENGER? ";
+        getline(cin, name);
+        Game g(10, 10);
+        addStandardShips(g);
+        Player* p1 = createPlayer("good", "MEGAMIND", g);
+        Player* p2 = createPlayer("human", name, g);
+        g.play(p1, p2);
+        delete p1;
+        delete p2;
     }
     else
     {
