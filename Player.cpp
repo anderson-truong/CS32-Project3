@@ -397,8 +397,6 @@ private:
     vector<Point> m_missed;
     vector<Point> m_destroyed;
     vector<ShipType> shipsAlive;
-    vector<Point> prevAttacks;
-    Point transitionPoint;
     int huntOrTarget; // 0 = Hunt, 1 = Target
     int probArray[MAXROWS][MAXCOLS];
 };
@@ -417,7 +415,7 @@ void GoodPlayer::printProbArray()
     }
 }
 
-GoodPlayer::GoodPlayer(string nm, const Game& g) : Player(nm, g), huntOrTarget(0), transitionPoint()
+GoodPlayer::GoodPlayer(string nm, const Game& g) : Player(nm, g), huntOrTarget(0)
 { 
     resetProbArray();
     for (int n = 0; n < g.nShips(); n++)
@@ -519,21 +517,30 @@ void GoodPlayer::huntProb()
             }
     }
 
-    // Parity
+    // Parity: only keep every other N positions
+    // N: smallest length of ship
+    int smallestLength = shipsAlive[0].length;
+    for (const ShipType& st : shipsAlive)
+    {
+        if (st.length < smallestLength)
+            smallestLength = st.length;
+    }
     for (int r = 0; r < game().rows(); r++)
+    {
         for (int c = 0; c < game().cols(); c++)
         {
-            if (r % 2 != c % 2)
+            if (r % smallestLength != c % smallestLength)
                 probArray[r][c] = 0;
         }
+    }
 }
 
-// FIX
 void GoodPlayer::targetProb()
 {
     resetProbArray();
-    int row = transitionPoint.r;
-    int col = transitionPoint.c;
+    Point target = m_destroyed.front();
+    int row = target.r;
+    int col = target.c;
     for (const ShipType& st : shipsAlive)
     {
             // For each possible placement starting position in vertical crosshair
@@ -545,6 +552,7 @@ void GoodPlayer::targetProb()
                         probArray[r][col]++;
                     }
                 }
+            // For each possible placement starting position in horizontal crosshair
             for (int i = col - st.length + 1; i <= col; i++)
                 if (validPlace(Point(row, i), st.length, HORIZONTAL))
                 {
@@ -557,13 +565,6 @@ void GoodPlayer::targetProb()
     // Set destroyed spot to 0 probability
     for (const Point& p : m_destroyed)
         probArray[p.r][p.c] = 0;
-    for (int r = 0; r < 10; r++)
-    {
-        for (int c = 0; c < 10; c++)
-            cout << probArray[r][c] << ", ";
-        cout << endl;
-    }
-
 }
 
 Point GoodPlayer::recommendAttack()
@@ -572,31 +573,23 @@ Point GoodPlayer::recommendAttack()
         huntProb();
     if (huntOrTarget == 1)
         targetProb();
-   //printProbArray();
+
     int maxProb = 0;
-    vector<Point> maxPoints;
+    Point best;
     for (int r = 0; r < game().rows(); r++)
     {
         for (int c = 0; c < game().cols(); c++)
         {
-            // Probability of a ship at a point
-            int prob = probArray[r][c];
-            // Add to list of best points to recommend
-            if (prob == maxProb)
-                maxPoints.push_back(Point(r, c));
-
-            // Override previous best points
-            if (prob > maxProb)
+            if (probArray[r][c] > maxProb)
             {
-                maxProb = prob;
-                maxPoints.clear();
-                maxPoints.push_back(Point(r, c));
+                maxProb = probArray[r][c];
+                best.r = r;
+                best.c = c;
             }
         }
     }
 
-    // Return random Point from best points list
-    return maxPoints[randInt(maxPoints.size())];
+    return best;
 }
 
 void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool shipDestroyed, int shipId)
@@ -604,10 +597,8 @@ void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool 
     // If hit, switch to targeting mode, add Point to list of destroyed
     if (shotHit)
     {
-        if (huntOrTarget == 0)
-            transitionPoint = p;
-        huntOrTarget = 1;
         m_destroyed.push_back(p);
+        huntOrTarget = 1;
     }
     // If not, stay in same mode, add Point to list of missed
     else
@@ -618,10 +609,73 @@ void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool 
     // Reset list of destroyed
     if (shipDestroyed)
     {
-        huntOrTarget = 0;
-        for (Point p : m_destroyed)
-            m_missed.push_back(p);
-        m_destroyed.clear();
+        Point target = m_destroyed.front();
+        int destroyedShipLength = game().shipLength(shipId);
+        int start;
+        int end;
+        // If destroyed ship was vertical
+        if (p.c == target.c)
+        {
+            // Point p is topmost
+            if (p.r < target.r)
+            {
+                start = p.r;
+                end = p.r + destroyedShipLength;
+            }
+            // Point p is bottommost
+            else
+            {
+                start = p.r - destroyedShipLength + 1;
+                end = p.r + 1;
+            }
+            // Make destroyed ship positions invalid
+            for (int r = start; r < end; r++)
+            {
+                // Add point to missed
+                m_missed.push_back(Point(r, p.c));
+                // Remove from destroyed
+                for (auto it = m_destroyed.begin(); it != m_destroyed.end();)
+                {
+                    if ((*it).r == r && (*it).c == p.c)
+                        it = m_destroyed.erase(it);
+                    else
+                        it++;
+                }
+            }
+        }
+        // Destroyed ship was horizontal
+        else
+        {
+            // Point p is leftmost
+            if (p.c < target.c)
+            {
+                start = p.c;
+                end = p.c + destroyedShipLength;
+            }
+            // Point p is rightmost
+            else
+            {
+                start = p.c - destroyedShipLength + 1;
+                end = p.c + 1;
+            }
+            // Make destroyed ship positions invalid
+            for (int c = start; c < end; c++)
+            {
+                // Add point to missed
+                m_missed.push_back(Point(p.r, c));
+                // Remove from destroyed
+                for (auto it = m_destroyed.begin(); it != m_destroyed.end();)
+                {
+                    if ((*it).r == p.r && (*it).c == c)
+                        it = m_destroyed.erase(it);
+                    else
+                        it++;
+                }
+            }
+        }
+        // Switch to HUNT if no positions left in m_destroyed
+        if (m_destroyed.empty())
+            huntOrTarget = 0;
     }
 }
 
