@@ -398,6 +398,7 @@ private:
     vector<Point> m_destroyed;
     vector<ShipType> shipsAlive;
     vector<Point> prevAttacks;
+    Point transitionPoint;
     int huntOrTarget; // 0 = Hunt, 1 = Target
     int probArray[MAXROWS][MAXCOLS];
 };
@@ -416,7 +417,7 @@ void GoodPlayer::printProbArray()
     }
 }
 
-GoodPlayer::GoodPlayer(string nm, const Game& g) : Player(nm, g), huntOrTarget(0)
+GoodPlayer::GoodPlayer(string nm, const Game& g) : Player(nm, g), huntOrTarget(0), transitionPoint()
 { 
     resetProbArray();
     for (int n = 0; n < g.nShips(); n++)
@@ -517,36 +518,52 @@ void GoodPlayer::huntProb()
                         probArray[r][c]++;
             }
     }
+
+    // Parity
+    for (int r = 0; r < game().rows(); r++)
+        for (int c = 0; c < game().cols(); c++)
+        {
+            if (r % 2 != c % 2)
+                probArray[r][c] = 0;
+        }
 }
 
 // FIX
 void GoodPlayer::targetProb()
 {
     resetProbArray();
+    int row = transitionPoint.r;
+    int col = transitionPoint.c;
     for (const ShipType& st : shipsAlive)
     {
-        for (const Point& p : m_destroyed)
-        {
             // For each possible placement starting position in vertical crosshair
-            for (int i = p.r - st.length + 1; i <= p.r; i++)
-                // For each position along ship placement path
-                for (int r = i; r < i + st.length; r++)
-                    // If valid position, add to probability
-                    if (validPoint(Point(r, p.c)))
-                        probArray[r][p.c]++;   
-
-            // For each possible placement starting position in horizontal crosshair
-            for (int i = p.c - st.length + 1; i <= p.c; i++)
-                // For each position along ship placement path
-                for (int c = i; c < i + st.length; c++)
-                    // If valid position, add to probability
-                    if (validPoint(Point(p.r, c)))
-                        probArray[p.r][c]++;
-        }
+            for (int i = row - st.length + 1; i <= row; i++)
+                if (validPlace(Point(i, col), st.length, VERTICAL))
+                {
+                    for (int r = i; r < i + st.length; r++)
+                    {
+                        probArray[r][col]++;
+                    }
+                }
+            for (int i = col - st.length + 1; i <= col; i++)
+                if (validPlace(Point(row, i), st.length, HORIZONTAL))
+                {
+                    for (int c = i; c < i + st.length; c++)
+                    {
+                        probArray[row][c]++;
+                    }
+                }
     }
     // Set destroyed spot to 0 probability
     for (const Point& p : m_destroyed)
         probArray[p.r][p.c] = 0;
+    for (int r = 0; r < 10; r++)
+    {
+        for (int c = 0; c < 10; c++)
+            cout << probArray[r][c] << ", ";
+        cout << endl;
+    }
+
 }
 
 Point GoodPlayer::recommendAttack()
@@ -562,9 +579,6 @@ Point GoodPlayer::recommendAttack()
     {
         for (int c = 0; c < game().cols(); c++)
         {
-            // Parity: if row, col not both odd/both even, skip
-            if (r % 2 != c % 2)
-                continue;
             // Probability of a ship at a point
             int prob = probArray[r][c];
             // Add to list of best points to recommend
@@ -590,6 +604,8 @@ void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool 
     // If hit, switch to targeting mode, add Point to list of destroyed
     if (shotHit)
     {
+        if (huntOrTarget == 0)
+            transitionPoint = p;
         huntOrTarget = 1;
         m_destroyed.push_back(p);
     }
