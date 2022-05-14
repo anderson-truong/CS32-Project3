@@ -4,6 +4,7 @@
 #include "globals.h"
 #include "utility.h"
 #include <iostream>
+#include <algorithm>
 #include <string>
 #include <iomanip>
 #include <list>
@@ -85,9 +86,10 @@ public:
     virtual bool isHuman() const { return true;  }
     virtual bool placeShips(Board& b);
     virtual Point recommendAttack();
-    virtual void recordAttackResult(Point p, bool validShot, bool shotHit,
-        bool shipDestroyed, int shipId);
-    virtual void recordAttackByOpponent(Point p);
+
+    // Human player makes decisions, no body necessary
+    virtual void recordAttackResult(Point p, bool validShot, bool shotHit, bool shipDestroyed, int shipId) { }
+    virtual void recordAttackByOpponent(Point p) { }
 };
 
 bool HumanPlayer::placeShips(Board& b)
@@ -175,16 +177,6 @@ Point HumanPlayer::recommendAttack()
     return Point(r, c);
 }
 
-void HumanPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool shipDestroyed, int shipId) 
-{
-    // No code necessary, user makes decisions
-}
-
-void HumanPlayer::recordAttackByOpponent(Point p)
-{
-    // No code necessary, user makes decisions
-}
-
 //*********************************************************************
 //  MediocrePlayer
 //*********************************************************************
@@ -197,14 +189,19 @@ public:
     virtual Point recommendAttack();
     virtual void recordAttackResult(Point p, bool validShot, bool shotHit,
         bool shipDestroyed, int shipId);
-    virtual void recordAttackByOpponent(Point p) { return; }
+    virtual void recordAttackByOpponent(Point p) { } // Ignores attack by opponent
 
-    bool recursivePlace(Board& b, int shipId);
 private:
+    bool recursivePlace(Board& b, int shipId);
     bool pointNotChosen(Point& p);
 
+    // Stores the Move State (1 or 2)
     int m_moveState;
+
+    // Stores the point that transitions from State 1 to 2
     Point transitionPoint;
+
+    // Stores previous attacks to not target again
     list<Point> prevAttacks;
 };
 
@@ -380,33 +377,50 @@ class GoodPlayer : public Player
 {
 public:
     GoodPlayer(string nm, const Game& g);
-    bool recursivePlace(Board& b, int shipId);
     virtual bool placeShips(Board& b);
     virtual Point recommendAttack();
     virtual void recordAttackResult(Point p, bool validShot, bool shotHit,
         bool shipDestroyed, int shipId);
-    virtual void recordAttackByOpponent(Point p) { }
+    virtual void recordAttackByOpponent(Point p) { } // Ignores attack by opponent
 
+private:
     bool validPoint(Point p);
     bool validPlace(Point p, int shipId, Direction dir);
+    bool recursivePlace(Board& b, int shipId);
+    void resetProbArray();
+    void printProbArray();
     void huntProb();
     void targetProb();
-    void resetProbArray();
 
-    void printProbArray();
-private:
     enum AttackMode
     {
         HUNT,
         TARGET
     };
+
+    // Stores missed shots (or already destroyed ship points)
     vector<Point> m_missed;
+
+    // Stores hits that aren't fully destroyed ships
     vector<Point> m_destroyed;
+
+    // Stores the enemy's undestroyed ships
     vector<ShipType> shipsAlive;
-    AttackMode m_attackMode; // HUNT or TARGET
+
+    // Attacking mode for recommending a point
+    // HUNT or TARGET
+    AttackMode m_attackMode;
+
+    // Stores probability density array for every point on enemy's board
     int probArray[MAXROWS][MAXCOLS];
 };
 
+//##################
+// Prints out probability density
+// of all points on enemy's board
+// 
+// USES CERR FOR DEBUGGING
+//##################
 void GoodPlayer::printProbArray()
 {
     for (int r = 0; r < game().rows(); r++)
@@ -421,6 +435,9 @@ void GoodPlayer::printProbArray()
     }
 }
 
+//#####################
+// GoodPlayer starts out in HUNT mode
+//#####################
 GoodPlayer::GoodPlayer(string nm, const Game& g) : Player(nm, g), m_attackMode(HUNT)
 { 
     // Sets probability array to all 0s
@@ -436,29 +453,35 @@ GoodPlayer::GoodPlayer(string nm, const Game& g) : Player(nm, g), m_attackMode(H
 //##################
 bool GoodPlayer::recursivePlace(Board& b, int shipId)
 {
+    // End case (all ships placed)
     if (shipId == game().nShips())
         return true;
 
+    // Try to place ships randomly up to max 50 times
     for (int i = 0; i < 50; i++)
     {
         int shipLength = game().shipLength(shipId);
-        // Make sure no ships adjacent to ship space
-        
+
         // Random point
         Point p(randInt(game().rows()) - shipLength + 1, randInt(game().cols()) - shipLength + 1);
+
         // Random direction;
         int dirChoice = randInt(2);
         Direction dir = dirChoice == 0 ? VERTICAL : HORIZONTAL;
 
+        // Try to place ship at random position and direction
         if (b.placeShip(p, shipId, dir))
         {
+            // Try to place next ship randomly
             if (recursivePlace(b, shipId + 1))
                 return true;
+            // Unplace current ship if cannot place next ship
             else
                 b.unplaceShip(p, shipId, dir);
         }
     }
 
+    // Unable to place ship on board
     return false;
 }
 
@@ -476,17 +499,22 @@ bool GoodPlayer::placeShips(Board& b)
 //################
 bool GoodPlayer::validPoint(Point p)
 {
+    // Point is out of bounds
     if (!game().isValid(p))
         return false;
+
+    // Checks if passed Point pos matches Point p
     auto matchingPos = [&p](Point pos)
     {
         if (p.r == pos.r && p.c == pos.c)
             return true;
         return false;
     };
-    // Point has already been moved on
+
+    // If Point p matches any Point in m_missed, it is invalid
     if (find_if(m_missed.begin(), m_missed.end(), matchingPos) != m_missed.end())
         return false;
+
     return true;
 }
 
@@ -496,11 +524,13 @@ bool GoodPlayer::validPoint(Point p)
 //#################
 bool GoodPlayer::validPlace(Point p, int shipLength, Direction dir)
 {
+    // TopLeft point is invalid
     if (!validPoint(p))
         return false;
+
     if (dir == VERTICAL)
     {
-        // Validate Points along vertical path
+        // Validate Points along vertical direction from Point p
         for (int r = p.r; r < p.r + shipLength; r++)
         {
             if (!validPoint(Point(r, p.c)))
@@ -508,9 +538,10 @@ bool GoodPlayer::validPlace(Point p, int shipLength, Direction dir)
         }
         return true;
     }
+
     if (dir == HORIZONTAL)
     {
-        // Validate Points along horizontal path
+        // Validate Points along horizontal direction from Point p
         for (int c = p.c; c < p.c + shipLength; c++)
         {
             if (!validPoint(Point(p.r, c)))
@@ -518,38 +549,68 @@ bool GoodPlayer::validPlace(Point p, int shipLength, Direction dir)
         }
         return true;
     }
+
+    // Invalid direction
     return false;
 }
 
+//#######################
+// Sets the probability of all points to zero
+//#######################
+void GoodPlayer::resetProbArray()
+{
+    for (int r = 0; r < MAXROWS; r++)
+        for (int c = 0; c < MAXCOLS; c++)
+            probArray[r][c] = 0;
+}
+
+//########################
+// Hunting Mode: No ships currently targeted
+// 
+// Produces a probability density array based
+// on number of possibly ship configurations
+// at every single point on the board
+// 
+// Points in the crosshair of a missed shot
+// have reduced probability
+//########################
 void GoodPlayer::huntProb()
 {
     resetProbArray();
+
+    // Add probability density for each ship
     for (const ShipType& st : shipsAlive)
     {
+        // Loop through all points on the board
         for (int r = 0; r < game().rows(); r++)
             for (int c = 0; c < game().cols(); c++)
             {
-                // Check placements along vertical crosshair
+                // Validate placements along vertical crosshair centered at point
                 for (int i = r - st.length + 1; i <= r; i++)
+                    // Add to probability if able to place particular ship configuration
                     if (validPlace(Point(i, c), st.length, VERTICAL))
                         probArray[r][c]++;
                 
-                // Check placements along horizontal crosshair
+                // Validate placements along horizontal crosshair centered at point
                 for (int i = c - st.length + 1; i <= c; i++)
+                    // Add to probability if able to place particular ship configuration
                     if (validPlace(Point(r, i), st.length, HORIZONTAL))
                         probArray[r][c]++;
             }
     }
 
-    // Parity: only keep every other N positions
-    // Set other points to 0 probability
-    // N: smallest length of ship
+    // Parity Strategy
+    // Keep every other N (smallest ship length) positions, set others to 0 probability
+
+    // Find smallest ship length
     int smallestLength = shipsAlive[0].length;
     for (const ShipType& st : shipsAlive)
     {
         if (st.length < smallestLength)
             smallestLength = st.length;
     }
+    
+    // Set probability of ships not on parity grid to zero
     for (int r = 0; r < game().rows(); r++)
     {
         for (int c = 0; c < game().cols(); c++)
@@ -560,13 +621,25 @@ void GoodPlayer::huntProb()
     }
 }
 
+//########################
+// Targeting Mode: One ship being targeted
+// 
+// Produces probability density crosshair
+// centered at the point when the mode 
+// switched from HUNT to TARGET
+// 
+// If another point is a hit, points along the
+// path from that hit to the switching point
+// is heavily weighted to produce a bias
+// along that particular direction
+//########################
 void GoodPlayer::targetProb()
 {
     resetProbArray();
     Point target = m_destroyed.front();
     int row = target.r;
     int col = target.c;
-    for (const ShipType& st : shipsAlive)
+    for (ShipType& st : shipsAlive)
     {
             // For each possible placement starting position in vertical crosshair
             for (int i = row - st.length + 1; i <= row; i++)
@@ -592,16 +665,30 @@ void GoodPlayer::targetProb()
     if (m_destroyed.size() >= 2)
     {
         // Same row
-        if (m_destroyed[0].r == m_destroyed[1].r)
+        if (target.r == m_destroyed[1].r)
         {
             for (int i = 0; i < game().cols(); i++)
-                probArray[m_destroyed[0].r][i] *= 2;
+            {
+                if (i != target.c)
+                {
+                    probArray[target.r][i] *= 2;
+                    // Artificially weigh closer points
+                    probArray[target.r][i] *= 10 / abs(i - target.c);
+                }
+            }
         }
         // Same column
-        if (m_destroyed[0].c == m_destroyed[1].c)
+        if (target.c == m_destroyed[1].c)
         {
             for (int i = 0; i < game().rows(); i++)
-                probArray[i][m_destroyed[0].c] *= 2;
+            {
+                if (i != target.r)
+                {
+                    probArray[i][target.c] *= 2;
+                    // Artificially weigh closer points
+                    probArray[i][target.c] *= 10 / abs(i - target.r);
+                }
+            }
         }
     }
     // Set destroyed spot to 0 probability
@@ -609,13 +696,24 @@ void GoodPlayer::targetProb()
         probArray[p.r][p.c] = 0;
 }
 
+//#############################
+// Calculates probability density based on attack mode
+// Returns point with highest probability in the array
+//#############################
 Point GoodPlayer::recommendAttack()
 {
+    // Calculate HUNT probabilities
     if (m_attackMode == HUNT)
+    {
         huntProb();
+    }
+    // Calculate TARGET probabilities
     if (m_attackMode == TARGET)
+    {
         targetProb();
+    }
 
+    // Return point with highest value (probability) in probArray
     int maxProb = 0;
     Point best;
     for (int r = 0; r < game().rows(); r++)
@@ -634,8 +732,14 @@ Point GoodPlayer::recommendAttack()
     return best;
 }
 
+//#############################
+// Calculates probability density based on attack mode
+// Returns point with highest probability in the array
+//#############################
 void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool shipDestroyed, int shipId)
 {
+    if (shipsAlive.empty())
+        return;
     // If hit, switch to targeting mode, add Point to list of destroyed
     if (shotHit)
     {
@@ -646,17 +750,31 @@ void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool 
     else
         m_missed.push_back(p);
 
-    // If ship was destroyed at Point P
-    // 1. Deduce which positions the ship was located on
-    // 2. Move those positions to m_missed positions
-    // 3. If there are still positions in m_destroyed, Keep targeting those positions
-    // 4. If m_destroyed is empty, switch to HUNT mode
+
+    // If ship was destroyed at Point p:
+    // -------------------------------------
+    // 1. Remove ship from vector of remaining ships
+    // 2. Deduce which positions the ship was located on
+    // 3. Move those positions from m_destroyed to m_missed
+    // 4. If there are still positions in m_destroyed, stay in TARGET mode
+    // 5. If m_destroyed is empty, switch to HUNT mode
     if (shipDestroyed)
     {
+        // Remove destroyed ship from vector
+        for (vector<ShipType>::iterator it = shipsAlive.begin(); it != shipsAlive.end(); )
+        {
+            if (it->symbol == game().shipSymbol(shipId))
+                it = shipsAlive.erase(it);
+            else
+                it++;
+        }
+
+        // Determine the space where the ship was located
         Point target = m_destroyed.front();
         int destroyedShipLength = game().shipLength(shipId);
         int start = 0;
         int end = 0;
+
         // Point p is topmost
         if (p.r < target.r)
         {
@@ -712,18 +830,10 @@ void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool 
                     it++;
             }
         }
-
         // Switch to HUNT if no positions left in m_destroyed
         if (m_destroyed.empty())
             m_attackMode = HUNT;
     }
-}
-
-void GoodPlayer::resetProbArray()
-{
-    for (int r = 0; r < MAXROWS; r++)
-        for (int c = 0; c < MAXCOLS; c++)
-            probArray[r][c] = 0;
 }
 
 //*********************************************************************

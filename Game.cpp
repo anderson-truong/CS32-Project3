@@ -112,11 +112,11 @@ string GameImpl::shipName(int shipId) const
 
 bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedBoard, bool shouldPause)
 {
-    //cout << attacker->name() << "'s turn.   Board for " << attacked->name() << ":" << endl;
-    //if (attacker->isHuman())
-    //    attackedBoard.display(true);
-    //else
-    //    attackedBoard.display(false);
+    cout << attacker->name() << "'s turn.   Board for " << attacked->name() << ":" << endl;
+    if (attacker->isHuman())
+        attackedBoard.display(true);
+    else
+        attackedBoard.display(false);
 
     Point attackPos = attacker->recommendAttack();
     bool shotHit;
@@ -126,28 +126,30 @@ bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedB
 
     attacker->recordAttackResult(attackPos, boardAttack, shotHit, shipDestroyed, shipIdAttacked);
     attacked->recordAttackByOpponent(attackPos);
-    //if (boardAttack)
-    //{
-    //    cout << attacker->name() << " attacked (" << attackPos.r << "," << attackPos.c << ") and ";
-    //    if (shotHit)
-    //    {
-    //        if (shipDestroyed)
-    //            cout << "destroyed the " << shipName(shipIdAttacked);
-    //        else
-    //            cout << "hit something";
-    //    }
-    //    else
-    //        cout << "missed";
-    //    cout << ", resulting in:" << endl;
-    //    if (attacker->isHuman())
-    //        attackedBoard.display(true);
-    //    else
-    //        attackedBoard.display(false);
-    //}
-    //else
-    //{
-    //    cout << attacker->name() << " wasted a shot at (" << attackPos.r << "," << attackPos.c << ")." << endl;
-    //}
+
+    if (boardAttack)
+    {
+        cout << attacker->name() << " attacked (" << attackPos.r << "," << attackPos.c << ") and ";
+        if (shotHit)
+        {
+            if (shipDestroyed)
+                cout << "destroyed the " << shipName(shipIdAttacked);
+            else
+                cout << "hit something";
+        }
+        else
+            cout << "missed";
+        cout << ", resulting in:" << endl;
+        if (attacker->isHuman())
+            attackedBoard.display(true);
+        else
+            attackedBoard.display(false);
+    }
+    else
+    {
+        cout << attacker->name() << " wasted a shot at (" << attackPos.r << "," << attackPos.c << ")." << endl;
+    }
+
     if (attackedBoard.allShipsDestroyed())
         return true;
 

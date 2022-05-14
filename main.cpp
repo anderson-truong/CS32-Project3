@@ -15,9 +15,65 @@ bool addStandardShips(Game& g)
            g.addShip(2, 'P', "patrol boat");
 }
 
+////========================================================================
+//// Timer t;                 // create a timer and start it
+//// t.start();               // start the timer
+//// double d = t.elapsed();  // milliseconds since timer was last started
+////========================================================================
+//
+//#include <chrono>
+//
+//class Timer
+//{
+//public:
+//    Timer()
+//    {
+//        start();
+//    }
+//    void start()
+//    {
+//        m_time = std::chrono::high_resolution_clock::now();
+//    }
+//    double elapsed() const
+//    {
+//        std::chrono::duration<double, std::milli> diff =
+//            std::chrono::high_resolution_clock::now() - m_time;
+//        return diff.count();
+//    }
+//private:
+//    std::chrono::high_resolution_clock::time_point m_time;
+//};
+//
+//int main()
+//{
+//    Game g(10, 10);
+//    g.addShip(5, 'A', "aircraft carrier");
+//    g.addShip(4, 'B', "battleship");
+//    g.addShip(3, 'D', "destroyer");
+//    g.addShip(3, 'S', "submarine");
+//    g.addShip(2, 'P', "patrol boat");
+//    Board b(g);
+//    bool shotHit = false;
+//    bool destroyed = false;
+//    int id = -1;
+//    Player* p = createPlayer("good", "bob", g);
+//    p->placeShips(b);
+//    for (int i = 0; i < 100; i++)
+//    {
+//        Timer timer;
+//        timer.start();
+//        Point a = p->recommendAttack();
+//        bool valid = b.attack(a, shotHit, destroyed, id);
+//        p->recordAttackResult(a, valid, shotHit, destroyed, id);
+//        p->recordAttackByOpponent(a);
+//        cout << timer.elapsed() << endl;
+//    }
+//    
+//}
+
 int main()
 {
-    const int NTRIALS = 1000;
+    const int NTRIALS = 20;
 
     cout << "Select one of these choices for an example of the game:" << endl;
     cout << "  1.  A mini-game between two mediocre players" << endl;
@@ -108,8 +164,8 @@ int main()
         getline(cin, name);
         Game g(10, 10);
         addStandardShips(g);
-        Player* p1 = createPlayer("good", "MEGAMIND", g);
-        Player* p2 = createPlayer("human", name, g);
+        Player* p1 = createPlayer("human", name, g);
+        Player* p2 = createPlayer("good", "MEGAMIND", g);
         g.play(p1, p2);
         delete p1;
         delete p2;
