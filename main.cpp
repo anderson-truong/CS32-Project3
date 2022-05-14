@@ -2,6 +2,7 @@
 #include "Player.h"
 #include "Board.h"
 #include <iostream>
+#include <iomanip>
 #include <string>
 
 using namespace std;
@@ -66,7 +67,7 @@ bool addStandardShips(Game& g)
 //        bool valid = b.attack(a, shotHit, destroyed, id);
 //        p->recordAttackResult(a, valid, shotHit, destroyed, id);
 //        p->recordAttackByOpponent(a);
-//        cout << timer.elapsed() << endl;
+//        cout  << timer.elapsed() << endl;
 //    }
 //    
 //}

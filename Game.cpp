@@ -8,7 +8,6 @@
 #include <cstdlib>
 #include <cctype>
 #include <vector>
-#include <algorithm>
 
 using namespace std;
 
@@ -27,10 +26,13 @@ class GameImpl
     string shipName(int shipId) const;
     Player* play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause);
 
-    bool playerAttack(Player* attacker, Player* attacked, Board& attackedBoard, bool shouldPause);
 private:
+    bool playerAttack(Player* attacker, Player* attacked, Board& attackedBoard, bool shouldPause);
+
     int m_rows;
     int m_cols;
+
+    // Stores available ShipTypes for the game
     vector<ShipType> shipTypes;
 };
 
@@ -40,9 +42,7 @@ void waitForEnter()
     cin.ignore(10000, '\n');
 }
 
-GameImpl::GameImpl(int nRows, int nCols): m_rows(nRows), m_cols(nCols)
-{
-}
+GameImpl::GameImpl(int nRows, int nCols): m_rows(nRows), m_cols(nCols) { }
 
 int GameImpl::rows() const
 {
@@ -66,25 +66,20 @@ Point GameImpl::randomPoint() const
     return Point(randInt(rows()), randInt(cols()));
 }
 
+// ################
+// Adds a unique ship type
+// 
+// Symbol and length already
+// validated in Game::addShip()
+// ################
 bool GameImpl::addShip(int length, char symbol, string name)
 {
-    // Length is at least 1 and cannot exceed row/column size
-    if (length < 1 || length > MAXROWS || length > MAXCOLS)
-        return false;
-
-    // Checks if new ship has same name
-    auto sameName = [&name, &symbol](ShipType ship)
-    {
-        // Same name
-        if (name == ship.name)
-            return true;
-
-        return false;
-    };
-
     // If new ship name matches old, cannot add new ship
-    if (find_if(shipTypes.begin(), shipTypes.end(), sameName) != shipTypes.end())
-        return false;
+    for (const ShipType& st : shipTypes)
+    {
+        if (name == st.name)
+            return false;
+    }
 
     shipTypes.push_back(ShipType(length, symbol, name));
     return true;
@@ -110,26 +105,48 @@ string GameImpl::shipName(int shipId) const
     return shipTypes[shipId].name;
 }
 
+// ##########################
+// One player attacks the other's board
+// 
+// 1. Displays other's board
+// 2. Gets recommended point from attacker
+// 3. Attacks other's board at point
+// 4. Logs attack result with attacker
+// 5. Logs attack result with attacked
+// 6. Displays attack result on board
+// 7. Checks if game is over (all ships destroyed)
+// 8. Pauses for enter (or not)
+// ##########################
 bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedBoard, bool shouldPause)
 {
+    // 1. Prompts attacker's turn, displays other's board
     cout << attacker->name() << "'s turn.   Board for " << attacked->name() << ":" << endl;
     if (attacker->isHuman())
+        // Display shots only if attacker is a HumanPlayer
         attackedBoard.display(true);
     else
         attackedBoard.display(false);
 
+    // 2. Gets recommended point from attacker
     Point attackPos = attacker->recommendAttack();
     bool shotHit;
     bool shipDestroyed;
     int shipIdAttacked;
+
+    // 3. Attack other's board at recommended point
     bool boardAttack = attackedBoard.attack(attackPos, shotHit, shipDestroyed, shipIdAttacked);
 
+    // 4, 5. Record attack result with attacker and attacked
     attacker->recordAttackResult(attackPos, boardAttack, shotHit, shipDestroyed, shipIdAttacked);
     attacked->recordAttackByOpponent(attackPos);
 
+    // 6. Display attack result on board
     if (boardAttack)
     {
+        // Display attack position
         cout << attacker->name() << " attacked (" << attackPos.r << "," << attackPos.c << ") and ";
+
+        // Display valid shot result
         if (shotHit)
         {
             if (shipDestroyed)
@@ -139,42 +156,62 @@ bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedB
         }
         else
             cout << "missed";
+
+        // Display board after attack
         cout << ", resulting in:" << endl;
         if (attacker->isHuman())
             attackedBoard.display(true);
         else
             attackedBoard.display(false);
     }
+    // Invalid point (out of bounds or same as previous attack)
     else
     {
         cout << attacker->name() << " wasted a shot at (" << attackPos.r << "," << attackPos.c << ")." << endl;
     }
 
+    // 7. Check if game is over (all ships destroyed)
     if (attackedBoard.allShipsDestroyed())
         return true;
 
+    // 8. Pause (or not)
     if (shouldPause)
         waitForEnter();
+
+    // Game is not over yet
     return false;
 }
 
+// ######################
+// Start a game between two players
+// 
+// 1. Places ships for both players
+// 2. Players attack in order until one wins
+// ######################
 Player* GameImpl::play(Player* p1, Player* p2, Board& b1, Board& b2, bool shouldPause)
 {
+    // If cannot place ships for either player
     if (!p1->placeShips(b1) || !p2->placeShips(b2))
         return nullptr;
+
+    // Loop until a player wins
     while (true)
     {
+        // If player 1 attacks and destroys all ships
         if (playerAttack(p1, p2, b2, shouldPause))
         {
             cout << p1->name() << " wins!" << endl;
             return p1;
         }
+        // If player 2 attacks and destroys all ships
         if (playerAttack(p2, p1, b1, shouldPause))
         {
             cout << p2->name() << " wins!" << endl;
             return p2;
         }
     }
+
+    // Default return path
     return nullptr;
 }
 

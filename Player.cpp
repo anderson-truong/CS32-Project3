@@ -636,13 +636,19 @@ void GoodPlayer::huntProb()
 void GoodPlayer::targetProb()
 {
     resetProbArray();
+
+    // Find Point that triggered TARGET mode (first Point in m_destroyed)
     Point target = m_destroyed.front();
     int row = target.r;
     int col = target.c;
+
+    // Calculate probability of each ship along crosshair centered at Point
     for (ShipType& st : shipsAlive)
     {
-            // For each possible placement starting position in vertical crosshair
+            // For each possible ship placement position in vertical crosshair
             for (int i = row - st.length + 1; i <= row; i++)
+                // If able to place a ship vertically
+                // Add 1 to all points along ship placement path
                 if (validPlace(Point(i, col), st.length, VERTICAL))
                 {
                     for (int r = i; r < i + st.length; r++)
@@ -650,8 +656,11 @@ void GoodPlayer::targetProb()
                         probArray[r][col]++;
                     }
                 }
-            // For each possible placement starting position in horizontal crosshair
+
+            // For each possible ship placement position in horizontal crosshair
             for (int i = col - st.length + 1; i <= col; i++)
+                // If able to place a ship horizontally
+                // Add 1 to all points along ship placement path
                 if (validPlace(Point(row, i), st.length, HORIZONTAL))
                 {
                     for (int c = i; c < i + st.length; c++)
@@ -661,33 +670,37 @@ void GoodPlayer::targetProb()
                 }
     }
 
-    // If hits twice, hone in one single line in crosshair
+    // If there are at least 2 hit points (forming a line)
+    // increase weights for the points on the line
     if (m_destroyed.size() >= 2)
     {
-        // Same row
+        // Both points are on same row
         if (target.r == m_destroyed[1].r)
         {
+            // Loop through all points on same row
             for (int i = 0; i < game().cols(); i++)
             {
+                // Double weights on point
+                probArray[target.r][i] *= 2;
+
+                // Increase weights based on proximity to target point
                 if (i != target.c)
-                {
-                    probArray[target.r][i] *= 2;
-                    // Artificially weigh closer points
                     probArray[target.r][i] *= 10 / abs(i - target.c);
-                }
             }
         }
-        // Same column
+
+        // Both points are on same column
         if (target.c == m_destroyed[1].c)
         {
+            // Loop through all points on same column
             for (int i = 0; i < game().rows(); i++)
             {
+                // Double weights on point
+                probArray[i][target.c] *= 2;
+
+                // Increase weights based on proximity to target point
                 if (i != target.r)
-                {
-                    probArray[i][target.c] *= 2;
-                    // Artificially weigh closer points
                     probArray[i][target.c] *= 10 / abs(i - target.r);
-                }
             }
         }
     }
@@ -702,16 +715,17 @@ void GoodPlayer::targetProb()
 //#############################
 Point GoodPlayer::recommendAttack()
 {
+    // No ships left
+    if (shipsAlive.empty())
+        return Point();
+
     // Calculate HUNT probabilities
     if (m_attackMode == HUNT)
-    {
         huntProb();
-    }
+
     // Calculate TARGET probabilities
     if (m_attackMode == TARGET)
-    {
         targetProb();
-    }
 
     // Return point with highest value (probability) in probArray
     int maxProb = 0;
@@ -740,6 +754,7 @@ void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool 
 {
     if (shipsAlive.empty())
         return;
+        
     // If hit, switch to targeting mode, add Point to list of destroyed
     if (shotHit)
     {
@@ -749,7 +764,6 @@ void GoodPlayer::recordAttackResult(Point p, bool validShot, bool shotHit, bool 
     // If not, stay in same mode, add Point to list of missed
     else
         m_missed.push_back(p);
-
 
     // If ship was destroyed at Point p:
     // -------------------------------------

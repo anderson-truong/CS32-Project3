@@ -3,7 +3,7 @@
 
 #include <string>
 
-// Stores individual ship data
+// Stores ship type data
 struct ShipType
 {
     int length;

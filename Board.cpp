@@ -28,48 +28,63 @@ class BoardImpl
     bool attack(Point p, bool& shotHit, bool& shipDestroyed, int& shipId);
     bool allShipsDestroyed() const;
 
+  private:
     bool shipInstanceDestroyed(const ShipInstance& instance) const;
 
-  private:
     const Game& m_game;
+
     // Stores the display grid
     char m_grid[MAXROWS][MAXCOLS];
-    // Stores list of ship IDs and their topOrLeft positions
+
+    // Stores list of ship IDs, their topOrLeft positions, and placement direction
     vector<ShipInstance> m_shipInstances;
 };
 
-// Check if ShipInstance is destroyed (through iterator)
+BoardImpl::BoardImpl(const Game& g) : m_game(g)
+{
+    // Initialize grid with '.'
+    clear();
+}
+
+// ############################
+// Check if a particular ShipInstance is destroyed
+// 
+// Checks the game board for ShipInstance's symbol 
+// from topOrLeft position towards Direction
+// for shipLength number of positions
+// 
+// If no symbols left along path, return true
+// ############################
 bool BoardImpl::shipInstanceDestroyed(const ShipInstance& instance) const
 {
-    // Check if damaged ship is destroyed
+    // Start position at topOrLeft
     Point current = instance.topOrLeft;
     int shipLength = m_game.shipLength(instance.shipId);
     char shipSymbol = m_game.shipSymbol(instance.shipId);
 
+    // Loop up to shipLength number of positions
     for (int i = 0; i < shipLength; i++)
     {
-        // If still has symbol along allocated space, ship is not destroyed
+        // If symbol is along path, ShipInstance is still alive
         if (m_grid[current.r][current.c] == shipSymbol)
         {
             return false;
         }
-        // Increment column
+
+        // Increment column if Direction is HORIZONTAL
         if (instance.dir == HORIZONTAL)
             current.c++;
-        // Increment row
+        // Increment row if Direction is VERTICAL
         if (instance.dir == VERTICAL)
             current.r++;
     }
     return true;
 }
 
-BoardImpl::BoardImpl(const Game& g)
- : m_game(g)
-{
-    // Initialize grid with '.'s
-    clear();
-}
-
+// #############
+// Set all points on the 
+// game board array to '.'
+// #############
 void BoardImpl::clear()
 {
     // Reset grid with '.'s
@@ -78,6 +93,10 @@ void BoardImpl::clear()
             m_grid[r][c] = '.';
 }
 
+// ##############
+// Blocks 50% of the board
+// at random positions
+// ##############
 void BoardImpl::block()
 {
     // Stores previously blocked Points
@@ -110,6 +129,10 @@ void BoardImpl::block()
     }
 }
 
+// ###################
+// Unblocks previously blocked
+// positions from BoardImpl::block()
+// ###################
 void BoardImpl::unblock()
 {
     for (int r = 0; r < m_game.rows(); r++)
@@ -120,6 +143,10 @@ void BoardImpl::unblock()
         }
 }
 
+// #####################
+// Attempt to place a ship on the board
+// at a position and in a direction
+// #####################
 bool BoardImpl::placeShip(Point topOrLeft, int shipId, Direction dir)
 {
     // Invalid ID
@@ -127,65 +154,64 @@ bool BoardImpl::placeShip(Point topOrLeft, int shipId, Direction dir)
         return false;
     
     // Check if Ship with ID already exists on Board
-    auto idMatches = [&shipId](ShipInstance sp)
+    for (const ShipInstance& sI : m_shipInstances)
     {
-        if (shipId == sp.shipId)
-            return true;
-        return false;
-    };
+        if (shipId == sI.shipId)
+            return false;
+    }
 
-    // If any of the existing ships on the board has ID that matches shipId
-    if (any_of(m_shipInstances.begin(), m_shipInstances.end(), idMatches))
-        return false;
-
-    // Current position of ship block for validation
+    // Start position validation at topOrLeft
     Point current = topOrLeft;
 
-    // Validate allocated ship space
+    // Number of positions to loop through
     int shipLength = m_game.shipLength(shipId);
 
-    // Loop to validate each block of the ship
+    // Position validation along intended ship space
     for (int i = 0; i < shipLength; i++)
     {
-        // Check Point goes off the board
-        if (current.r < 0 || current.r >= m_game.rows() || current.c < 0 || current.c >= m_game.cols())
+        // Ship goes out of bounds
+        if (!m_game.isValid(current))
             return false;
-        // Check if Point is already occupied
+
+        // Position is already occupied
         if (m_grid[current.r][current.c] != '.')
             return false;
 
-        // Column varies, row constant
+        // Increment column if Direction is HORIZONTAL
         if (dir == HORIZONTAL)
             current.c++;
-        // Row varies, column constant
+        // Increment row if Direction is VERTICAL
         if (dir == VERTICAL)
             current.r++;
     }
 
-    // Log ship's ID
+    // Store ShipInstance as a part of the Board now
     m_shipInstances.push_back(ShipInstance(shipId, topOrLeft, dir));
 
-    // Reset current Position to starting
-    current = topOrLeft;
-
     // Place shipSymbols in allocated space
+    current = topOrLeft;
     int shipSymbol = m_game.shipSymbol(shipId);
     for (int i = 0; i < shipLength; i++)
     {
         m_grid[current.r][current.c] = shipSymbol;
-        // Column varies, row constant
+
+        // Increment column if Direction is HORIZONTAL
         if (dir == HORIZONTAL)
             current.c++;
-        // Row varies, column constant
+        // Increment row if Direction is VERTICAL
         if (dir == VERTICAL)
             current.r++;
     }
     return true;
 }
 
+// ###############
+// Attempts to unplace a ship
+// from a point in a direction
+// ###############
 bool BoardImpl::unplaceShip(Point topOrLeft, int shipId, Direction dir)
 {
-    // Matches arguments to existing ShipInstance
+    // Tries to match arguments to a ShipInstance
     // Returns true if matches, false otherwise
     auto match = [&topOrLeft, &shipId, &dir](ShipInstance sp)
     {
@@ -197,7 +223,7 @@ bool BoardImpl::unplaceShip(Point topOrLeft, int shipId, Direction dir)
         return false;
     };
 
-    // Try to match to existing ShipInstance
+    // Try to match to existing ShipInstances
     vector<ShipInstance>::iterator matchedSP = find_if(m_shipInstances.begin(), m_shipInstances.end(), match);
 
     // Could not find matching ShipInstance
@@ -205,24 +231,32 @@ bool BoardImpl::unplaceShip(Point topOrLeft, int shipId, Direction dir)
         return false;
 
     // Replace Ship's symbols with '.'
-    int shipLength = m_game.shipLength(shipId);
     Point current = topOrLeft;
+    int shipLength = m_game.shipLength(shipId);
     for (int i = 0; i < shipLength; i++)
     {
         m_grid[current.r][current.c] = '.';
-        // Increment column
+
+        // Increment column if Direction is HORIZONTAL
         if (dir == HORIZONTAL)
             current.c++;
+        // Increment row if Direction is VERTICAL
         if (dir == VERTICAL)
             current.r++;
     }
 
-    // Remove ShipInstance from existing list
+    // Remove ShipInstance
     m_shipInstances.erase(matchedSP);
 
     return true;
 }
 
+// #################
+// Displays the game board
+// 
+// Can show both ships and shots
+// Or just shots only
+// #################
 void BoardImpl::display(bool shotsOnly) const
 {
     // Print column indices
@@ -230,16 +264,18 @@ void BoardImpl::display(bool shotsOnly) const
     for (int c = 0; c < m_game.cols(); c++) cout << c;
     cout << endl;
     
-    // Print rows
     for (int r = 0; r < m_game.rows(); r++)
     {
+        // Print row index
         cout << r << " ";
+
+        // Print ship and shot symbols
         for (int c = 0; c < m_game.cols(); c++)
         {
-            // To only show shots,
-            // print '.' if point is a ship symbol (i.e. not 'X' or 'o')
+            // If shots only, print '.' if point is a ship symbol (i.e. not 'X' or 'o')
             if (shotsOnly && m_grid[r][c] != 'X' && m_grid[r][c] != 'o')
                 cout << '.';
+            // Otherwise, just print normally
             else
                 cout << m_grid[r][c];
         }
@@ -247,6 +283,12 @@ void BoardImpl::display(bool shotsOnly) const
     }
 }
 
+// #########################
+// Attack a point on a board
+//  
+// Tells if the attack was valid, hit a ship, 
+// and if it destroyed a ship (and the ship's id)
+// #########################
 bool BoardImpl::attack(Point p, bool& shotHit, bool& shipDestroyed, int& shipId)
 {
     // Point is outside board
@@ -278,15 +320,16 @@ bool BoardImpl::attack(Point p, bool& shotHit, bool& shipDestroyed, int& shipId)
         return true;
     }
 
-    // Match symbol at position to ShipInstance
+    // Find ship by matching symbol at the Point to a shipId
     vector<ShipInstance>::iterator matchedShipPos;
     for (matchedShipPos = m_shipInstances.begin(); matchedShipPos != m_shipInstances.end(); matchedShipPos++)
     {
+        // Symbol at Point matches a ship's symbol
         if (m_grid[p.r][p.c] == m_game.shipSymbol(matchedShipPos->shipId))
             break;
     }
 
-    // Mark ship section as damaged
+    // Mark board position as a hit
     m_grid[p.r][p.c] = 'X';
 
     // Check if damaged ship is destroyed
@@ -296,10 +339,12 @@ bool BoardImpl::attack(Point p, bool& shotHit, bool& shipDestroyed, int& shipId)
     return true;
 }
 
+// ########################
+// Checks if all ShipInstances are destroyed
+// ########################
 bool BoardImpl::allShipsDestroyed() const
 {
-    // Check if all of ShipInstances are destroyed
-    return all_of(m_shipInstances.begin(), m_shipInstances.end(), 
+    return all_of(m_shipInstances.begin(), m_shipInstances.end(),
         [this](const ShipInstance& sp) { return shipInstanceDestroyed(sp);  }
     );
 }
