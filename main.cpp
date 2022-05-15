@@ -74,7 +74,7 @@ bool addStandardShips(Game& g)
 
 int main()
 {
-    const int NTRIALS = 20;
+    const int NTRIALS = 1;
 
     cout << "Select one of these choices for an example of the game:" << endl;
     cout << "  1.  A mini-game between two mediocre players" << endl;

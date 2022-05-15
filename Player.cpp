@@ -457,7 +457,7 @@ bool GoodPlayer::recursivePlace(Board& b, int shipId)
     if (shipId == game().nShips())
         return true;
 
-    // Try to place ships randomly up to max 50 times
+    // Try to place ships randomly
     for (int i = 0; i < 50; i++)
     {
         int shipLength = game().shipLength(shipId);
