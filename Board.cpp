@@ -7,14 +7,6 @@
 
 using namespace std;
 
-struct ShipInstance
-{
-    int shipId;
-    Point topOrLeft;
-    Direction dir;
-    ShipInstance(int shipId, Point topOrLeft, Direction dir): shipId(shipId), topOrLeft(topOrLeft), dir(dir){ }
-};
-
 class BoardImpl
 {
   public:
@@ -29,6 +21,14 @@ class BoardImpl
     bool allShipsDestroyed() const;
 
   private:
+    struct ShipInstance
+    {
+        int shipId;
+        Point topOrLeft;
+        Direction dir;
+        ShipInstance(int shipId, Point topOrLeft, Direction dir) : shipId(shipId), topOrLeft(topOrLeft), dir(dir) { }
+    };
+
     bool shipInstanceDestroyed(const ShipInstance& instance) const;
 
     const Game& m_game;
@@ -44,41 +44,6 @@ BoardImpl::BoardImpl(const Game& g) : m_game(g)
 {
     // Initialize grid with '.'
     clear();
-}
-
-// ############################
-// Check if a particular ShipInstance is destroyed
-// 
-// Checks the game board for ShipInstance's symbol 
-// from topOrLeft position towards Direction
-// for shipLength number of positions
-// 
-// If no symbols left along path, return true
-// ############################
-bool BoardImpl::shipInstanceDestroyed(const ShipInstance& instance) const
-{
-    // Start position at topOrLeft
-    Point current = instance.topOrLeft;
-    int shipLength = m_game.shipLength(instance.shipId);
-    char shipSymbol = m_game.shipSymbol(instance.shipId);
-
-    // Loop up to shipLength number of positions
-    for (int i = 0; i < shipLength; i++)
-    {
-        // If symbol is along path, ShipInstance is still alive
-        if (m_grid[current.r][current.c] == shipSymbol)
-        {
-            return false;
-        }
-
-        // Increment column if Direction is HORIZONTAL
-        if (instance.dir == HORIZONTAL)
-            current.c++;
-        // Increment row if Direction is VERTICAL
-        if (instance.dir == VERTICAL)
-            current.r++;
-    }
-    return true;
 }
 
 // #############
@@ -106,25 +71,16 @@ void BoardImpl::block()
 
     while (blockCount > 0)
     {
-        // New Point with random row/col coordinates
-        Point p(randInt(m_game.rows()), randInt(m_game.cols()));
+        // Random row and column
+        int r = randInt(m_game.rows());
+        int c = randInt(m_game.cols());
 
-        // If Point already exists, continue and find new random Point
-        bool pointBlocked = false;
-        for (Point prev : previouslyBlocked)
-        {
-            if (p.r == prev.r && p.c == prev.c)
-            {
-                pointBlocked = true;
-                break;
-            }
-        }
-        if (pointBlocked)
+        // If already blocked, skip
+        if (m_grid[r][c] == 'X')
             continue;
 
         // Block out array at Point
-        m_grid[p.r][p.c] = 'X';
-        previouslyBlocked.push_back(p);
+        m_grid[r][c] = 'X';
         blockCount--;
     }
 }
@@ -283,6 +239,41 @@ void BoardImpl::display(bool shotsOnly) const
     }
 }
 
+// ############################
+// Check if a particular ShipInstance is destroyed
+// 
+// Checks the game board for ShipInstance's symbol 
+// from topOrLeft position towards Direction
+// for shipLength number of positions
+// 
+// If no symbols left along path, return true
+// ############################
+bool BoardImpl::shipInstanceDestroyed(const ShipInstance& instance) const
+{
+    // Start position at topOrLeft
+    Point current = instance.topOrLeft;
+    int shipLength = m_game.shipLength(instance.shipId);
+    char shipSymbol = m_game.shipSymbol(instance.shipId);
+
+    // Loop up to shipLength number of positions
+    for (int i = 0; i < shipLength; i++)
+    {
+        // If symbol is along path, ShipInstance is still alive
+        if (m_grid[current.r][current.c] == shipSymbol)
+        {
+            return false;
+        }
+
+        // Increment column if Direction is HORIZONTAL
+        if (instance.dir == HORIZONTAL)
+            current.c++;
+        // Increment row if Direction is VERTICAL
+        if (instance.dir == VERTICAL)
+            current.r++;
+    }
+    return true;
+}
+
 // #########################
 // Attack a point on a board
 //  
@@ -291,17 +282,8 @@ void BoardImpl::display(bool shotsOnly) const
 // #########################
 bool BoardImpl::attack(Point p, bool& shotHit, bool& shipDestroyed, int& shipId)
 {
-    // Point is outside board
-    if (p.r < 0 || p.r >= m_game.rows() || p.c < 0 || p.c >= m_game.cols())
-    {
-        shotHit = false;
-        shipDestroyed = false;
-        shipId = -1;
-        return false;
-    }
-
-    // Already attacked position
-    if (m_grid[p.r][p.c] == 'X' || m_grid[p.r][p.c] == 'o')
+    // Point is outside board or is already attacked
+    if (!m_game.isValid(p) || m_grid[p.r][p.c] == 'X' || m_grid[p.r][p.c] == 'o')
     {
         shotHit = false;
         shipDestroyed = false;
@@ -344,9 +326,16 @@ bool BoardImpl::attack(Point p, bool& shotHit, bool& shipDestroyed, int& shipId)
 // ########################
 bool BoardImpl::allShipsDestroyed() const
 {
-    return all_of(m_shipInstances.begin(), m_shipInstances.end(),
-        [this](const ShipInstance& sp) { return shipInstanceDestroyed(sp);  }
-    );
+    // Loop through all ship instances
+    for (const ShipInstance& sp : m_shipInstances)
+    {
+        // If ship is not destroyed
+        if (!shipInstanceDestroyed(sp))
+            return false;
+    }
+
+    // All ships destroyed
+    return true;
 }
 
 //******************** Board functions ********************************
