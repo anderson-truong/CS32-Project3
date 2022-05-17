@@ -121,11 +121,8 @@ bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedB
 {
     // 1. Prompts attacker's turn, displays other's board
     cout << attacker->name() << "'s turn.   Board for " << attacked->name() << ":" << endl;
-    if (attacker->isHuman())
-        // Display shots only if attacker is a HumanPlayer
-        attackedBoard.display(true);
-    else
-        attackedBoard.display(false);
+    // Display shots only if attacker is a HumanPlayer
+    attackedBoard.display(attacker->isHuman());
 
     // 2. Gets recommended point from attacker
     Point attackPos = attacker->recommendAttack();
@@ -159,10 +156,7 @@ bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedB
 
         // Display board after attack
         cout << ", resulting in:" << endl;
-        if (attacker->isHuman())
-            attackedBoard.display(true);
-        else
-            attackedBoard.display(false);
+        attackedBoard.display(attacker->isHuman());
     }
     // Invalid point (out of bounds or same as previous attack)
     else
