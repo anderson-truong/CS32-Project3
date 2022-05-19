@@ -415,26 +415,6 @@ private:
     int probArray[MAXROWS][MAXCOLS];
 };
 
-//##################
-// Prints out probability density
-// of all points on enemy's board
-// 
-// USES CERR FOR DEBUGGING
-//##################
-void GoodPlayer::printProbArray()
-{
-    for (int r = 0; r < game().rows(); r++)
-    {
-        for (int c = 0; c < game().cols(); c++)
-        {
-            cerr << setw(2) << probArray[r][c];
-            if (c != game().cols() - 1)
-                cerr << ", ";
-        }
-        cerr << endl;
-    }
-}
-
 //#####################
 // GoodPlayer starts out in HUNT mode
 //#####################
