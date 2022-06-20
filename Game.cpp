@@ -119,7 +119,7 @@ string GameImpl::shipName(int shipId) const
 // ##########################
 bool GameImpl::playerAttack(Player* attacker, Player* attacked, Board& attackedBoard, bool shouldPause)
 {
-    // 1. Prompts attacker's turn, displays other's board
+    //// 1. Prompts attacker's turn, displays other's board
     cout << attacker->name() << "'s turn.   Board for " << attacked->name() << ":" << endl;
     // Display shots only if attacker is a HumanPlayer
     attackedBoard.display(attacker->isHuman());
